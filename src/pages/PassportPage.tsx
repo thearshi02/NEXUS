@@ -4,21 +4,21 @@ import {
   Share2, 
   Download, 
   Lock, 
-  QrCode, 
   CheckCircle2, 
   Copy, 
   ExternalLink,
-  Layers,
   FileText,
   Clock,
   Sparkles,
-  Info
+  Info,
+  HelpCircle
 } from 'lucide-react';
 import { useNexus } from '../context/NexusContext';
 import { TrustPassportCard } from '../components/shared/TrustPassportCard';
+import { formatINR } from '../utils/formatters';
 
 export const PassportPage: React.FC = () => {
-  const { user, records, cashFlowData, setIsShareModalOpen, setIsReportModalOpen, showToast } = useNexus();
+  const { user, records, monthlyInflow, monthlyOutflow, estimatedSavings, savingsRate, setIsShareModalOpen, setIsReportModalOpen, showToast } = useNexus();
   const [activeTab, setActiveTab] = useState<'card' | 'proofs' | 'preview'>('card');
   const [tokenCopied, setTokenCopied] = useState(false);
 
@@ -30,15 +30,20 @@ export const PassportPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-            Financial Trust Passport
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+              NEXUS Financial Trust Passport
+            </h1>
+            <span className="px-2 py-0.5 text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 rounded-md">
+              Explainable Trust Profile
+            </span>
+          </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Your portable, cryptographic proof of financial reliability and cash-flow health.
+            Your portable, user-controlled financial identity demonstrating cash-flow reliability for Indian freelancers and MSMEs.
           </p>
         </div>
 
@@ -48,7 +53,7 @@ export const PassportPage: React.FC = () => {
             className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
           >
             <Download className="w-3.5 h-3.5 text-slate-500" />
-            <span>Download Sample Report</span>
+            <span>Download PDF Report</span>
           </button>
           <button
             onClick={() => setIsShareModalOpen(true)}
@@ -70,7 +75,7 @@ export const PassportPage: React.FC = () => {
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          Digital Passport
+          Digital Trust Passport
         </button>
         <button
           onClick={() => setActiveTab('proofs')}
@@ -80,7 +85,7 @@ export const PassportPage: React.FC = () => {
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          Cryptographic Proofs
+          Verified Financial Proofs
         </button>
         <button
           onClick={() => setActiveTab('preview')}
@@ -90,7 +95,7 @@ export const PassportPage: React.FC = () => {
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          Underwriter View Preview
+          Institution View Preview
         </button>
       </div>
 
@@ -100,65 +105,77 @@ export const PassportPage: React.FC = () => {
           {/* Main Visual Passport Card */}
           <TrustPassportCard />
 
-          {/* Explained Indicators Grid */}
-          <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-2xs space-y-4">
+          {/* Explainable Indicators Detailed Breakdown */}
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-2xs space-y-5">
             <div>
               <h3 className="text-sm font-bold text-slate-900">
-                How Your Passport Indicators Are Evaluated
+                How Your Trust Indicators Are Evaluated
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Every factor is grounded in verifiable cash movements rather than debt utilization.
+                NEXUS indicators are grounded purely in verifiable cash transactions and bank statements — never black-box credit scores.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-              <div className="p-4 bg-slate-50/70 border border-slate-200/80 rounded-xl space-y-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 bg-slate-50/80 border border-slate-200/80 rounded-xl space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-900">1. Inflow Consistency Factor</span>
-                  <span className="font-mono text-emerald-700 font-semibold">94% Stability</span>
+                  <span className="font-bold text-slate-900">1. Income Consistency Indicator</span>
+                  <span className="font-mono text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded">86/100 (Strong)</span>
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Measures the regularity of client payments and platform deposits over 6 months. High scores confirm that income is predictable and ongoing.
+                  Evaluates regularity, frequency, and source diversity of incoming payments over 6+ months. John Doe maintains continuous monthly payouts from Apex Fintech and Bangalore Design Studio.
                 </p>
+                <div className="text-[11px] text-slate-500 font-medium">
+                  <strong>Derivation:</strong> Standard deviation of monthly inflows across UPI & IMPS feeds &lt; 8.5%.
+                </div>
               </div>
 
-              <div className="p-4 bg-slate-50/70 border border-slate-200/80 rounded-xl space-y-1">
+              <div className="p-4 bg-slate-50/80 border border-slate-200/80 rounded-xl space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-900">2. Operating Outflow Discipline</span>
-                  <span className="font-mono text-blue-700 font-semibold">53.9% Outflow Ratio</span>
+                  <span className="font-bold text-slate-900">2. Savings Behavior Indicator</span>
+                  <span className="font-mono text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded">82/100 (Disciplined)</span>
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Calculates total expenditures against gross monthly inflows. Demonstrates that you maintain positive operating margin without reliance on overdrafts.
+                  Measures the proportion of net earnings retained as reserves vs spent immediately. Average monthly retention of {formatINR(estimatedSavings)} ({savingsRate.toFixed(1)}% savings rate).
                 </p>
+                <div className="text-[11px] text-slate-500 font-medium">
+                  <strong>Derivation:</strong> (Monthly Net Savings / Total Monthly Inflow) × 100 benchmarked against 20% Indian freelancer baseline.
+                </div>
               </div>
 
-              <div className="p-4 bg-slate-50/70 border border-slate-200/80 rounded-xl space-y-1">
+              <div className="p-4 bg-slate-50/80 border border-slate-200/80 rounded-xl space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-900">3. Verified Record Feeds</span>
-                  <span className="font-mono text-slate-800 font-semibold">5 Authenticated</span>
+                  <span className="font-bold text-slate-900">3. Expense Management Indicator</span>
+                  <span className="font-mono text-slate-800 font-bold bg-slate-100 px-2 py-0.5 rounded">84/100 (Balanced)</span>
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Cross-checked through direct API integrations (Stripe, Upwork) and OFX encrypted statements. Protects reviewers from forged paystubs.
+                  Calculates total monthly outflow against gross inflow. Rent (₹8,000) and utilities (₹1,098) represent only 20.2% of income, well under the 40% burden threshold.
                 </p>
+                <div className="text-[11px] text-slate-500 font-medium">
+                  <strong>Derivation:</strong> Total Operating Expenses / Monthly Inflow with zero recorded overdraft penalties.
+                </div>
               </div>
 
-              <div className="p-4 bg-slate-50/70 border border-slate-200/80 rounded-xl space-y-1">
+              <div className="p-4 bg-slate-50/80 border border-slate-200/80 rounded-xl space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-900">4. Liquidity Reserve Cushion</span>
-                  <span className="font-mono text-teal-700 font-semibold">+$24.1k Cumulative</span>
+                  <span className="font-bold text-slate-900">4. Financial Record Availability</span>
+                  <span className="font-mono text-teal-700 font-bold bg-teal-50 px-2 py-0.5 rounded">100% (6 Records)</span>
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Analyzes net positive cash generation across consecutive quarterly cycles to verify emergency liquidity.
+                  Availability of digitally signed bank statements (HDFC), GST filings (GSTR-4), and authenticated UPI statements verifying stated income.
                 </p>
+                <div className="text-[11px] text-slate-500 font-medium">
+                  <strong>Derivation:</strong> 6 independent verification artifacts securely indexed with cryptographic checksums.
+                </div>
               </div>
             </div>
 
-            {/* Privacy Notice Banner */}
-            <div className="p-4 bg-blue-50/60 border border-blue-200 rounded-xl flex items-start gap-3 text-xs text-blue-950">
-              <Lock className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+            {/* Non-Lender Disclaimer Banner */}
+            <div className="p-4 bg-blue-50/70 border border-blue-200 rounded-xl flex items-start gap-3 text-xs text-blue-950">
+              <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
               <div>
-                <strong className="font-semibold text-blue-900">Privacy Notice: </strong>
-                Your financial information is shared only with your explicit permission. You choose the exact institutions, the duration of validity, and can revoke credentials with one click.
+                <strong className="font-semibold text-blue-900">Explainable Financial Identity Guarantee: </strong>
+                NEXUS does not issue credit scores or guarantee loan approvals. We organize verifiable financial behaviors into transparent, consent-controlled passports so you can share your real financial story with landlords, banks, or clients.
               </div>
             </div>
           </div>
@@ -175,7 +192,7 @@ export const PassportPage: React.FC = () => {
                   Cryptographic Ledger Integrity
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Every connected record produces an immutable digital signature.
+                  Every connected record produces an immutable digital signature for verification.
                 </p>
               </div>
               <button
@@ -190,20 +207,20 @@ export const PassportPage: React.FC = () => {
             <div className="p-3 bg-slate-900 text-white rounded-xl text-xs font-mono space-y-2">
               <div className="flex items-center justify-between text-slate-400 text-[10px]">
                 <span>ROOT MERKLE HASH:</span>
-                <span className="text-emerald-400">STATUS: VALIDATED</span>
+                <span className="text-emerald-400">STATUS: VALIDATED (INDIA REGION)</span>
               </div>
               <div className="text-blue-300 break-all">
                 0x9a8f238b91c1074e2d837651a0b32948cde9103857102948cb91283749201a09
               </div>
               <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
-                BLOCK STAMP: 2026-10-02T00:24:24Z · ENCRYPTION: SHA-256 · CLIENT SCOPE: READ_ONLY
+                BLOCK STAMP: 2026-10-03T04:15:00Z · ENCRYPTION: SHA-256 · CLIENT SCOPE: READ_ONLY · LOCALE: en-IN
               </div>
             </div>
 
             {/* Records Log Table */}
             <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
               <div className="bg-slate-50 px-4 py-2.5 font-bold text-slate-700 border-b border-slate-200 text-[11px] uppercase tracking-wider">
-                Indexed Evidence Records
+                Indexed Evidence Records (INR ₹)
               </div>
               <div className="divide-y divide-slate-100">
                 {records.map((r) => (
@@ -219,9 +236,9 @@ export const PassportPage: React.FC = () => {
                     </div>
                     <div className="text-right">
                       <span className="font-mono font-bold text-slate-900 text-xs tabular-nums">
-                        ${r.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {formatINR(r.amount)}
                       </span>
-                      <div className="text-[10px] font-mono text-emerald-700">Verified</div>
+                      <div className="text-[10px] font-mono text-emerald-700 font-medium">Verified Proof</div>
                     </div>
                   </div>
                 ))}
@@ -237,37 +254,37 @@ export const PassportPage: React.FC = () => {
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
               <span className="text-xs font-mono font-bold text-teal-700 uppercase tracking-wider">
-                Read-Only Session Preview
+                Read-Only Verifier Session
               </span>
               <h3 className="text-base font-bold text-slate-900 mt-0.5">
-                What Horizon Capital Sees During Underwriting
+                What HDFC Digital / Landlords See During Verification
               </h3>
             </div>
-            <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded">
-              Token expires in 10 days
+            <span className="text-xs font-mono text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded">
+              Token: {user.passportId}
             </span>
           </div>
 
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3 text-xs">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-slate-700">Applicant:</span>
-              <span className="font-bold text-slate-900">{user.name}</span>
+              <span className="font-bold text-slate-900">{user.name} ({user.city}, India)</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-slate-700">6-Month Average Inflow:</span>
-              <span className="font-mono font-bold text-slate-900">${user.inflowAverage.toLocaleString()}/mo</span>
+              <span className="font-semibold text-slate-700">6-Month Average Monthly Inflow:</span>
+              <span className="font-mono font-bold text-blue-700">{formatINR(monthlyInflow)}/mo</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-slate-700">Inflow Consistency Factor:</span>
-              <span className="font-mono font-bold text-emerald-700">{user.consistencyScore}% (High Stability)</span>
+              <span className="font-semibold text-slate-700">Income Consistency Rating:</span>
+              <span className="font-mono font-bold text-emerald-700">{user.incomeConsistencyScore || 86}% (High Stability)</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-slate-700">Operating Outflow:</span>
-              <span className="font-mono font-bold text-slate-800">53.9% of recurring revenue</span>
+              <span className="font-semibold text-slate-700">Average Savings Rate:</span>
+              <span className="font-mono font-bold text-slate-800">{savingsRate.toFixed(1)}% (+{formatINR(estimatedSavings)}/mo)</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-slate-700">Private Bank Passwords / SSN:</span>
-              <span className="text-emerald-700 font-semibold">REDACTED / Zero Exposure</span>
+              <span className="font-semibold text-slate-700">Banking Credentials / PAN / Aadhaar:</span>
+              <span className="text-emerald-700 font-semibold">REDACTED / Zero Exposure (Consent Protected)</span>
             </div>
           </div>
 

@@ -9,6 +9,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { PassportPage } from './pages/PassportPage';
 import { InsightsPage } from './pages/InsightsPage';
 import { TransactionsPage } from './pages/TransactionsPage';
+import { ForecastPage } from './pages/ForecastPage';
 import { RecordsPage } from './pages/RecordsPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="/passport" element={<PassportPage />} />
             <Route path="/insights" element={<InsightsPage />} />
             <Route path="/transactions" element={<TransactionsPage />} />
+            <Route path="/forecast" element={<ForecastPage />} />
             <Route path="/records" element={<RecordsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/settings" element={<SettingsPage />} />

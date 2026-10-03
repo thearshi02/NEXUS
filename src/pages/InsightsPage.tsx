@@ -1,239 +1,215 @@
 import React, { useState } from 'react';
 import { 
-  TrendingUp, 
   Sparkles, 
-  AlertCircle, 
+  TrendingUp, 
+  AlertTriangle, 
   CheckCircle2, 
+  HelpCircle, 
   RefreshCw, 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  PieChart, 
-  ShieldCheck, 
-  Info 
+  ArrowRight,
+  Send,
+  Bot,
+  User,
+  ShieldCheck,
+  Zap,
+  Info
 } from 'lucide-react';
-import { 
-  ResponsiveContainer, 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip 
-} from 'recharts';
 import { useNexus } from '../context/NexusContext';
 import { InsightCard } from '../components/shared/InsightCard';
+import { formatINR } from '../utils/formatters';
 
 export const InsightsPage: React.FC = () => {
-  const { insights, cashFlowData, user, setIsUploadModalOpen, showToast } = useNexus();
-  const [filter, setFilter] = useState<'all' | 'income' | 'spending' | 'records'>('all');
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { user, insights, transactions, aiEngineMode, isAiRefreshing, refreshAiInsights, showToast } = useNexus();
+  const [askQuery, setAskQuery] = useState('');
+  const [aiChatHistory, setAiChatHistory] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([
+    {
+      role: 'assistant',
+      text: `Hello John! I have reviewed your ₹45,000 monthly freelance cash flow in Lucknow. Your 36.7% savings rate is strong, and fixed overhead is low. What financial trends or passport indicators would you like me to explain?`
+    }
+  ]);
+  const [isAsking, setIsAsking] = useState(false);
 
-  const spendingTrendData = cashFlowData.map((d) => ({
-    month: d.month,
-    inflow: d.inflow,
-    outflow: d.outflow,
-    burnRate: Math.round((d.outflow / d.inflow) * 100)
-  }));
+  const handleSendQuestion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!askQuery.trim()) return;
 
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      showToast('Insights Re-evaluated', 'Algorithms reviewed all 5 connected financial feeds.', 'info');
-    }, 600);
+    const userText = askQuery.trim();
+    setAiChatHistory(prev => [...prev, { role: 'user', text: userText }]);
+    setAskQuery('');
+    setIsAsking(true);
+
+    try {
+      const response = await fetch('/api/ai/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: userText, user, transactions }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAiChatHistory(prev => [...prev, { role: 'assistant', text: data.answer }]);
+      } else {
+        throw new Error('Fallback to local assistant');
+      }
+    } catch (err) {
+      // Local intelligent response fallback
+      setTimeout(() => {
+        let answer = `Based on your recent transactions, your net savings of ₹16,500/month provides a solid safety cushion. Your top expense category is Rent & Housing (₹8,000), followed by Groceries (₹3,500) and Coworking (₹3,500). To optimize your score further, keep your dining expenses within ₹2,000/month.`;
+        if (userText.toLowerCase().includes('passport') || userText.toLowerCase().includes('completion')) {
+          answer = `Your Trust Passport is currently at 88% completeness. You can reach 95%+ by uploading your Q3 GST Filing receipt or adding a 3rd client invoice reference in the Records tab.`;
+        }
+        setAiChatHistory(prev => [...prev, { role: 'assistant', text: answer }]);
+      }, 600);
+    } finally {
+      setIsAsking(false);
+    }
   };
 
-  const filteredInsights = insights.filter((item) => {
-    if (filter === 'income') return item.category === 'Income Consistency';
-    if (filter === 'spending') return item.category === 'Spending Trend';
-    if (filter === 'records') return item.category === 'Profile Completeness';
-    return true;
-  });
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-            AI Financial Insights
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+              AI Financial Intelligence & Insights
+            </h1>
+            <span className="px-2 py-0.5 text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 rounded-md flex items-center gap-1">
+              <Sparkles className="w-3 h-3" />
+              {aiEngineMode === 'gemini_ai' ? 'Gemini 2.0 AI' : 'Rule-Based Engine'}
+            </span>
+          </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Transparent, explainable diagnostics generated from your consent-linked financial records.
+            Automated spending pattern detection, anomaly alerts, and cash-flow explanations tailored for {user.city}, India.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>Re-evaluate Records</span>
-          </button>
-          <button
-            onClick={() => setIsUploadModalOpen(true)}
-            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Add Feeds to Improve Profile</span>
-          </button>
-        </div>
+        <button
+          onClick={() => refreshAiInsights()}
+          disabled={isAiRefreshing}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs self-start sm:self-auto disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isAiRefreshing ? 'animate-spin' : ''}`} />
+          <span>{isAiRefreshing ? 'Analyzing Transactions...' : 'Re-Analyze Cash Flow'}</span>
+        </button>
       </div>
 
-      {/* Mandatory Regulatory & Informational Disclaimer */}
-      <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl flex items-start gap-3 text-xs text-amber-950">
-        <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <span className="font-bold text-amber-900">Regulatory Disclaimer:</span>
-          <p className="leading-relaxed text-amber-800">
-            These insights are informational and do not constitute a credit decision, formal lending commitment, or certified financial advice. All indicators reflect past transaction movements across connected accounts and are shared solely under your explicit instruction.
-          </p>
-        </div>
+      {/* Primary Insights Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {insights.map((insight) => (
+          <InsightCard key={insight.id} insight={insight} />
+        ))}
       </div>
 
-      {/* High-level 3-Factor Behavioral Diagnostic Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-2xs">
-          <div className="flex items-center justify-between text-xs text-slate-500 font-semibold uppercase">
-            <span>Cash-Flow Pattern Analysis</span>
-            <TrendingUp className="w-4 h-4 text-blue-600" />
-          </div>
-          <div className="mt-2 text-lg font-bold text-slate-900">Stable Growth Trajectory</div>
-          <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-            Your recorded income has followed a relatively stable pattern across 180 days, averaging $8,683/mo.
-          </p>
-          <div className="mt-3 text-[11px] font-mono font-semibold text-emerald-700 flex items-center gap-1">
-            <ArrowUpRight className="w-3.5 h-3.5" />
-            +7.8% higher than initial quarter
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-2xs">
-          <div className="flex items-center justify-between text-xs text-slate-500 font-semibold uppercase">
-            <span>Spending Trend Diagnostic</span>
-            <PieChart className="w-4 h-4 text-slate-500" />
-          </div>
-          <div className="mt-2 text-lg font-bold text-slate-900">Controlled Reserve Outflow</div>
-          <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-            Your spending increased slightly during September to $5,250, remaining under 55% of total inflow.
-          </p>
-          <div className="mt-3 text-[11px] font-mono text-slate-600">
-            Burn-to-revenue ratio: <strong className="text-slate-900">54.6%</strong>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-2xs">
-          <div className="flex items-center justify-between text-xs text-slate-500 font-semibold uppercase">
-            <span>Record Completeness</span>
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          </div>
-          <div className="mt-2 text-lg font-bold text-slate-900 font-mono">92% Index Coverage</div>
-          <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-            Adding more verified financial records (like an extra merchant account) may help complete your profile to 100%.
-          </p>
-          <div className="mt-3 text-[11px] font-mono text-blue-700 font-semibold">
-            5 Authenticated Feeds on File
-          </div>
-        </div>
-      </div>
-
-      {/* Spending Trend Visualization Chart */}
-      <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-2xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900">
-              6-Month Income vs Spending Trend
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Visual confirmation of continuous net-positive operational liquidity.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-4 text-xs">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block" />
-              <span className="text-slate-600 font-medium">Inflow</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-slate-400 inline-block" />
-              <span className="text-slate-600 font-medium">Outflow</span>
+      {/* AI Financial Assistant Interactive Query Box */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-5 sm:p-6 space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <Bot className="w-5 h-5 text-blue-600" />
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">
+                Ask NEXUS Financial Intelligence Advisor
+              </h3>
+              <p className="text-xs text-slate-500">
+                Ask questions about your savings rate, category trends, or passport indicators.
+              </p>
             </div>
           </div>
+          <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+            India Context Active (INR ₹)
+          </span>
         </div>
 
-        <div className="h-60 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={spendingTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-              <XAxis dataKey="month" stroke="#94A3B8" fontSize={11} tickLine={false} />
-              <YAxis 
-                stroke="#94A3B8" 
-                fontSize={11} 
-                tickLine={false} 
-                axisLine={false}
-                tickFormatter={(v) => `$${v / 1000}k`}
-              />
-              <Tooltip 
-                formatter={(value: any) => [`$${Number(value).toLocaleString()}`, '']}
-                contentStyle={{ backgroundColor: '#FFFFFF', borderColor: '#E2E8F0', borderRadius: '0.75rem', fontSize: '11px' }}
-              />
-              <Line type="monotone" dataKey="inflow" stroke="#2563EB" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-              <Line type="monotone" dataKey="outflow" stroke="#94A3B8" strokeWidth={2} dot={{ r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Filter Tabs & Detailed Insight Cards */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h3 className="text-sm font-bold text-slate-900">
-            Categorized Algorithmic Findings
-          </h3>
-
-          <div className="flex items-center p-0.5 bg-slate-100 rounded-lg text-xs font-medium">
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-3 py-1 rounded-md transition-colors ${
-                filter === 'all' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'
-              }`}
+        {/* Chat History */}
+        <div className="space-y-3 max-h-72 overflow-y-auto p-2">
+          {aiChatHistory.map((msg, idx) => (
+            <div
+              key={idx}
+              className={`flex gap-3 text-xs ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              All
-            </button>
-            <button
-              onClick={() => setFilter('income')}
-              className={`px-3 py-1 rounded-md transition-colors ${
-                filter === 'income' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Income Stability
-            </button>
-            <button
-              onClick={() => setFilter('spending')}
-              className={`px-3 py-1 rounded-md transition-colors ${
-                filter === 'spending' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Spending Ratio
-            </button>
-            <button
-              onClick={() => setFilter('records')}
-              className={`px-3 py-1 rounded-md transition-colors ${
-                filter === 'records' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Completeness
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredInsights.map((insight) => (
-            <InsightCard key={insight.id} insight={insight} />
+              {msg.role === 'assistant' && (
+                <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 mt-0.5 font-bold">
+                  AI
+                </div>
+              )}
+              <div
+                className={`p-3 rounded-xl max-w-[85%] sm:max-w-[75%] leading-relaxed ${
+                  msg.role === 'user'
+                    ? 'bg-blue-600 text-white font-medium rounded-tr-xs'
+                    : 'bg-slate-50 text-slate-800 border border-slate-200/80 rounded-tl-xs'
+                }`}
+              >
+                {msg.text}
+              </div>
+              {msg.role === 'user' && (
+                <div className="w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold">
+                  JD
+                </div>
+              )}
+            </div>
           ))}
+          {isAsking && (
+            <div className="flex gap-3 text-xs items-center text-slate-400">
+              <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              </div>
+              <span>NEXUS AI is synthesizing transaction patterns...</span>
+            </div>
+          )}
         </div>
+
+        {/* Query Input */}
+        <form onSubmit={handleSendQuestion} className="flex gap-2 pt-2 border-t border-slate-100">
+          <input
+            type="text"
+            placeholder="e.g. How does my ₹16,500 savings rate compare to other Lucknow freelancers?"
+            value={askQuery}
+            onChange={(e) => setAskQuery(e.target.value)}
+            className="flex-1 px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+          />
+          <button
+            type="submit"
+            disabled={!askQuery.trim() || isAsking}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl flex items-center gap-1.5 transition-colors shadow-2xs disabled:opacity-50"
+          >
+            <span>Ask</span>
+            <Send className="w-3.5 h-3.5" />
+          </button>
+        </form>
+
+        {/* Quick Question Chips */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px] text-slate-500">
+          <span>Quick queries:</span>
+          <button
+            type="button"
+            onClick={() => setAskQuery('Why did my food & dining expenses rise by 18%?')}
+            className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors"
+          >
+            Dining +18% Anomaly
+          </button>
+          <button
+            type="button"
+            onClick={() => setAskQuery('How can I increase my Financial Trust Passport score?')}
+            className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors"
+          >
+            Improve Passport Score
+          </button>
+          <button
+            type="button"
+            onClick={() => setAskQuery('Explain my fixed vs variable overhead ratio.')}
+            className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors"
+          >
+            Fixed Overhead Ratio
+          </button>
+        </div>
+      </div>
+
+      {/* Safety & Compliance Notice */}
+      <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/80 flex items-start gap-3 text-xs text-slate-600">
+        <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+        <p className="leading-relaxed">
+          <strong>Non-Advisory Notice:</strong> NEXUS AI provides descriptive behavioral analytics based strictly on your historical entries. It does not provide SEBI-registered investment advice, tax counseling, or loan guarantees.
+        </p>
       </div>
     </div>
   );

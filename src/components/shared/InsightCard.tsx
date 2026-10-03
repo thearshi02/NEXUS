@@ -4,9 +4,9 @@ import {
   TrendingUp, 
   Sparkles, 
   ArrowRight, 
-  ShieldAlert, 
+  AlertTriangle, 
   CheckCircle,
-  HelpCircle
+  AlertCircle
 } from 'lucide-react';
 import { FinancialInsight } from '../../types';
 
@@ -21,6 +21,8 @@ export const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     switch (insight.type) {
       case 'positive':
         return 'border-l-4 border-l-emerald-600';
+      case 'alert':
+        return 'border-l-4 border-l-amber-500';
       case 'recommendation':
         return 'border-l-4 border-l-blue-600';
       case 'neutral':
@@ -36,7 +38,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
           <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
             <span className="font-semibold text-slate-700">{insight.category}</span>
             <span aria-hidden="true">·</span>
-            <span>Algorithmic Pattern Analysis</span>
+            <span>AI Pattern Detection</span>
           </div>
           <h4 className="text-sm font-bold text-slate-900 tracking-tight">
             {insight.title}
@@ -44,13 +46,18 @@ export const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
         </div>
 
         {insight.type === 'positive' && (
-          <span className="text-[11px] font-mono font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+          <span className="text-[11px] font-mono font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
             Favorable Pattern
           </span>
         )}
+        {insight.type === 'alert' && (
+          <span className="text-[11px] font-mono font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60">
+            Anomaly Flag
+          </span>
+        )}
         {insight.type === 'recommendation' && (
-          <span className="text-[11px] font-mono font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
-            Optimization
+          <span className="text-[11px] font-mono font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200/60">
+            Optimization Action
           </span>
         )}
         {insight.type === 'neutral' && (
@@ -66,14 +73,14 @@ export const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
 
       {insight.metricNote && (
         <div className="mt-3 p-2 bg-slate-50 border border-slate-100 rounded-lg text-[11px] font-mono text-slate-600">
-          Audited metric: <strong className="text-slate-900 font-semibold">{insight.metricNote}</strong>
+          Detected Metric: <strong className="text-slate-900 font-semibold">{insight.metricNote}</strong>
         </div>
       )}
 
       {insight.actionLabel && (
         <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
           <span className="text-[11px] text-slate-400">
-            Based on authenticated 90-day ledger
+            Based on active UPI and banking transactions
           </span>
           <button
             onClick={() => insight.actionRoute && navigate(insight.actionRoute)}

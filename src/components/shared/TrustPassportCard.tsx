@@ -3,13 +3,11 @@ import {
   ShieldCheck, 
   Share2, 
   Download, 
-  Calendar, 
   Lock, 
-  Sparkles, 
-  CheckCircle2, 
-  Layers 
+  CheckCircle2
 } from 'lucide-react';
 import { useNexus } from '../../context/NexusContext';
+import { formatINR } from '../../utils/formatters';
 
 interface TrustPassportCardProps {
   onShare?: () => void;
@@ -22,7 +20,7 @@ export const TrustPassportCard: React.FC<TrustPassportCardProps> = ({
   onDownloadReport,
   compact = false
 }) => {
-  const { user, setIsShareModalOpen, setIsReportModalOpen } = useNexus();
+  const { user, monthlyInflow, monthlyOutflow, estimatedSavings, savingsRate, setIsShareModalOpen, setIsReportModalOpen } = useNexus();
 
   const handleShare = () => {
     if (onShare) onShare();
@@ -33,6 +31,8 @@ export const TrustPassportCard: React.FC<TrustPassportCardProps> = ({
     if (onDownloadReport) onDownloadReport();
     else setIsReportModalOpen(true);
   };
+
+  const expenseRatio = monthlyInflow > 0 ? ((monthlyOutflow / monthlyInflow) * 100).toFixed(1) : '63.3';
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
@@ -47,12 +47,12 @@ export const TrustPassportCard: React.FC<TrustPassportCardProps> = ({
               <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
                 NEXUS Financial Trust Passport
               </span>
-              <span className="text-[10px] font-mono font-medium text-blue-200 bg-blue-900/60 border border-blue-700/50 px-1.5 py-0.5 rounded">
-                DEMO IDENTIFIER
+              <span className="text-[10px] font-mono font-medium text-amber-200 bg-amber-950/80 border border-amber-700/60 px-1.5 py-0.5 rounded">
+                DEMO PROFILE
               </span>
             </div>
             <div className="text-[11px] font-mono text-slate-400">
-              SHA-256 Ledger: {user.passportId}
+              Passport Token: {user.passportId}
             </div>
           </div>
         </div>
@@ -60,7 +60,7 @@ export const TrustPassportCard: React.FC<TrustPassportCardProps> = ({
         <div className="text-right">
           <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-semibold justify-end">
             <ShieldCheck className="w-4 h-4" />
-            <span>Verified Credential</span>
+            <span>Verified Identity</span>
           </div>
           <div className="text-[11px] text-slate-400 font-mono mt-0.5">
             Updated {user.lastUpdated}
@@ -70,16 +70,6 @@ export const TrustPassportCard: React.FC<TrustPassportCardProps> = ({
 
       {/* Main Passport Content */}
       <div className="p-6 relative">
-        {/* Subtle Guilloche / Security Seal Background Accent */}
-        <div className="absolute right-6 top-6 opacity-[0.03] pointer-events-none hidden sm:block">
-          <svg width="220" height="220" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="100" cy="100" r="90" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
-            <circle cx="100" cy="100" r="75" stroke="currentColor" strokeWidth="1.5" />
-            <circle cx="100" cy="100" r="60" stroke="currentColor" strokeWidth="1" strokeDasharray="6 3" />
-            <polygon points="100,20 120,80 180,100 120,120 100,180 80,120 20,100 80,80" stroke="currentColor" strokeWidth="1.5" />
-          </svg>
-        </div>
-
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-slate-100 relative z-10">
           <div className="flex items-center gap-4">
             <div className="relative">
@@ -98,17 +88,17 @@ export const TrustPassportCard: React.FC<TrustPassportCardProps> = ({
                 <h2 className="text-lg font-bold text-slate-900 tracking-tight">
                   {user.name}
                 </h2>
-                <span className="hidden sm:inline text-[10px] font-mono text-blue-700 bg-blue-50 border border-blue-200/60 px-1.5 py-0.5 rounded font-semibold">
-                  CHIP-AUTH
+                <span className="text-[10px] font-mono text-blue-700 bg-blue-50 border border-blue-200/60 px-1.5 py-0.5 rounded font-semibold">
+                  {user.city}, UP (India)
                 </span>
               </div>
               <div className="text-xs text-slate-500 font-medium">
                 {user.personaTitle}
               </div>
               <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-500">
-                <span>Direct API Feeds: 3 Active</span>
+                <span>Direct Feeds: UPI + Net Banking</span>
                 <span aria-hidden="true">·</span>
-                <span>Verified Records: 5</span>
+                <span>Verified Records: 6</span>
               </div>
             </div>
           </div>
@@ -116,8 +106,8 @@ export const TrustPassportCard: React.FC<TrustPassportCardProps> = ({
           {/* Profile Completion Indicator */}
           <div className="w-full sm:w-48 bg-slate-50 border border-slate-200/90 rounded-xl p-3">
             <div className="flex items-center justify-between text-xs mb-1.5">
-              <span className="font-semibold text-slate-700">Profile Completion</span>
-              <span className="font-bold text-blue-600 font-mono tabular-nums">{user.profileCompletion}%</span>
+              <span className="font-semibold text-slate-700">Passport Completeness</span>
+              <span className="font-bold text-blue-700 font-mono tabular-nums">{user.profileCompletion}%</span>
             </div>
             <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
               <div 
@@ -126,28 +116,28 @@ export const TrustPassportCard: React.FC<TrustPassportCardProps> = ({
               />
             </div>
             <div className="text-[10px] text-slate-400 mt-1.5 flex items-center justify-between">
-              <span>Alternative Credibility</span>
-              <span>Level 3 (Max)</span>
+              <span>Consent-Ready</span>
+              <span className="text-emerald-700 font-semibold">Level 3 (Max)</span>
             </div>
           </div>
         </div>
 
-        {/* 4 Quantitative Financial Pillars */}
+        {/* 4 Quantitative Financial Pillars (All INR ₹) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 py-5">
           <div className="p-3 bg-slate-50/70 border border-slate-200/80 rounded-xl">
             <span className="text-[11px] font-medium text-slate-500 block">Avg. Monthly Inflow</span>
             <div className="text-base font-bold text-slate-900 font-mono tabular-nums mt-1">
-              ${user.inflowAverage.toLocaleString()}
+              {formatINR(monthlyInflow)}
             </div>
             <span className="text-[10px] text-emerald-700 font-medium mt-0.5 block font-mono">
-              +14.2% vs 6-mo base
+              +12.5% vs 6-mo base
             </span>
           </div>
 
           <div className="p-3 bg-slate-50/70 border border-slate-200/80 rounded-xl">
-            <span className="text-[11px] font-medium text-slate-500 block">Inflow Consistency</span>
+            <span className="text-[11px] font-medium text-slate-500 block">Income Consistency</span>
             <div className="text-base font-bold text-blue-700 font-mono tabular-nums mt-1">
-              {user.consistencyScore}% Stable
+              {user.incomeConsistencyScore || 86}% Stable
             </div>
             <span className="text-[10px] text-slate-500 mt-0.5 block">
               Low multi-month variance
@@ -155,9 +145,9 @@ export const TrustPassportCard: React.FC<TrustPassportCardProps> = ({
           </div>
 
           <div className="p-3 bg-slate-50/70 border border-slate-200/80 rounded-xl">
-            <span className="text-[11px] font-medium text-slate-500 block">Operating Outflow Ratio</span>
+            <span className="text-[11px] font-medium text-slate-500 block">Expense Ratio</span>
             <div className="text-base font-bold text-slate-800 font-mono tabular-nums mt-1">
-              53.9% Outflow
+              {expenseRatio}% Outflow
             </div>
             <span className="text-[10px] text-slate-500 mt-0.5 block">
               Balanced operating buffer
@@ -165,30 +155,30 @@ export const TrustPassportCard: React.FC<TrustPassportCardProps> = ({
           </div>
 
           <div className="p-3 bg-slate-50/70 border border-slate-200/80 rounded-xl">
-            <span className="text-[11px] font-medium text-slate-500 block">Liquidity Discipline</span>
-            <div className="text-base font-bold text-teal-700 font-mono tabular-nums mt-1">
-              +$4,000/mo
+            <span className="text-[11px] font-medium text-slate-500 block">Savings Discipline</span>
+            <div className="text-base font-bold text-emerald-700 font-mono tabular-nums mt-1">
+              +{formatINR(estimatedSavings)}/mo
             </div>
             <span className="text-[10px] text-slate-500 mt-0.5 block">
-              Consistent net positive
+              {savingsRate.toFixed(1)}% savings rate
             </span>
           </div>
         </div>
 
         {/* Verification Status Breakdown */}
         <div className="pt-2 pb-5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-4 text-slate-600">
+          <div className="flex flex-wrap items-center gap-4 text-slate-600">
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Stripe Connect Authenticated</span>
+              <span>UPI Settlement Audit</span>
             </div>
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Upwork Retainer Verified</span>
+              <span>GST (GSTR-4) Verified</span>
             </div>
-            <div className="hidden sm:flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Bank OFX Inflow Corroborated</span>
+              <span>HDFC Bank Statement Signed</span>
             </div>
           </div>
         </div>

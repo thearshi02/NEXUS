@@ -1,4 +1,30 @@
-export type UserPersona = 'freelancer' | 'student' | 'gig_worker' | 'small_business';
+export type UserPersona = 'student' | 'freelancer' | 'self_employed' | 'small_business';
+
+export type VerificationStatus = 'Verified' | 'Pending Verification' | 'Under Review' | 'Self-Reported';
+
+export interface UserProfile {
+  id?: string;
+  name: string;
+  email: string;
+  persona: UserPersona;
+  personaTitle: string;
+  city: string;
+  state: string;
+  country: string;
+  monthlyIncomeRange: string;
+  passportId: string;
+  verificationStatus: VerificationStatus;
+  profileCompletion: number;
+  avatarUrl: string;
+  lastUpdated: string;
+  inflowAverage: number;
+  outflowAverage: number;
+  savingsRate: number;
+  incomeConsistencyScore: number;
+  savingsBehaviorScore: number;
+  expenseManagementScore: number;
+  isDemoUser: boolean;
+}
 
 export interface FinancialMetric {
   label: string;
@@ -18,32 +44,65 @@ export interface MonthlyCashFlow {
   outflow: number;
   netSavings: number;
   consistencyScore: number;
+  isProjected?: boolean;
+}
+
+export type PaymentMethod = 
+  | 'UPI' 
+  | 'Net Banking' 
+  | 'IMPS / NEFT' 
+  | 'Debit Card' 
+  | 'Credit Card' 
+  | 'Cash' 
+  | 'Client Direct Payout';
+
+export type TransactionCategory = 
+  | 'Freelance Payment'
+  | 'Client Retainer'
+  | 'Salary / Stipend'
+  | 'Platform Inflow'
+  | 'Rent & Housing'
+  | 'Groceries & Food'
+  | 'Utilities & Bills'
+  | 'Software & Tools'
+  | 'Coworking / Studio'
+  | 'Transportation'
+  | 'Dining & Outing'
+  | 'Mobile & Internet'
+  | 'Healthcare & Wellness'
+  | 'Education & Skill'
+  | 'Taxes & Compliance'
+  | 'Savings & Investments'
+  | 'General Expense';
+
+export interface FinancialTransaction {
+  id: string;
+  user_id?: string;
+  title: string;
+  source: 'HDFC Bank' | 'ICICI Bank' | 'SBI' | 'UPI - Google Pay' | 'UPI - PhonePe' | 'Razorpay' | 'Direct Transfer' | 'Cash';
+  category: TransactionCategory;
+  type: 'inflow' | 'outflow';
+  amount: number;
+  date: string; // YYYY-MM-DD
+  paymentMethod: PaymentMethod;
+  status: 'settled' | 'cleared' | 'verified';
+  referenceId: string;
+  counterparty?: string;
+  notes?: string;
+  is_demo?: boolean;
 }
 
 export interface FinancialRecord {
   id: string;
   title: string;
-  source: 'Bank Account' | 'Stripe' | 'Upwork' | 'PayPal' | 'Square' | 'Uber / Lyft' | 'Invoicing System';
-  category: 'Platform Earnings' | 'Direct Deposit' | 'Client Invoice' | 'Operating Reserve' | 'Tax Escrow';
+  source: 'HDFC Bank' | 'ICICI Bank' | 'Razorpay' | 'UPI Statements' | 'GST Portal' | 'Client Contract' | 'Invoicing Portal';
+  category: 'Bank Statement' | 'UPI Inflow Audit' | 'Client Invoice' | 'GST Filing' | 'Tax Assessment' | 'Income Certificate';
   amount: number;
   date: string;
   verificationStatus: 'verified' | 'pending_verification' | 'self_reported';
   confidenceLevel: 'High' | 'Medium' | 'Standard';
   fileFormat?: string;
   referenceId: string;
-}
-
-export interface FinancialTransaction {
-  id: string;
-  title: string;
-  source: 'Bank Account' | 'Stripe' | 'Upwork' | 'PayPal' | 'Square' | 'Uber / Lyft' | 'Invoicing System';
-  category: 'Platform Inflow' | 'Client Retainer' | 'Software & Tools' | 'Cloud & Hosting' | 'Workspace & Studio' | 'Tax Escrow' | 'Operating Reserve';
-  type: 'inflow' | 'outflow';
-  amount: number;
-  date: string; // YYYY-MM-DD or formatted
-  status: 'settled' | 'cleared' | 'verified';
-  referenceId: string;
-  counterparty?: string;
 }
 
 export interface FilterState {
@@ -53,6 +112,7 @@ export interface FilterState {
   endDate: string;
   category: string;
   source: string;
+  paymentMethod: string;
   minAmount: string;
   maxAmount: string;
   type?: 'all' | 'inflow' | 'outflow';
@@ -62,25 +122,40 @@ export interface FilterState {
 export interface ConsentPartner {
   id: string;
   name: string;
-  type: 'Lender' | 'Landlord & Property Manager' | 'Equipment Financing' | 'Fintech Underwriting';
+  type: 'Lender' | 'Landlord & Property Manager' | 'Equipment Financing' | 'Fintech Underwriting' | 'MSME Credit Network';
   logoText: string;
   requestedFields: string[];
   purpose: string;
   grantedDate?: string;
   expiryDate?: string;
   status: 'active' | 'pending' | 'revoked';
-  accessLevel: 'Full Passport' | 'Income Verification Only' | 'Cash-Flow Summary';
+  accessLevel: 'Full Passport' | 'Income Verification Only' | 'Cash-Flow Summary' | 'Custom Fields';
+  consentToken?: string;
 }
 
 export interface FinancialInsight {
   id: string;
   title: string;
   description: string;
-  category: 'Income Consistency' | 'Spending Trend' | 'Cash Flow' | 'Profile Completeness';
-  type: 'positive' | 'neutral' | 'recommendation';
+  category: 'Income Consistency' | 'Spending Trend' | 'Cash Flow' | 'Profile Completeness' | 'Savings Action' | 'Anomaly Alert';
+  type: 'positive' | 'neutral' | 'recommendation' | 'alert';
+  severity?: 'low' | 'medium' | 'high';
   metricNote?: string;
   actionLabel?: string;
   actionRoute?: string;
+  isAiGenerated?: boolean;
+  modelConfidence?: string;
+}
+
+export interface CashFlowForecast {
+  month: string;
+  historicalInflow?: number;
+  historicalOutflow?: number;
+  estimatedIncome: number;
+  estimatedExpenses: number;
+  estimatedBalance: number;
+  confidenceScore: number;
+  assumptions: string[];
 }
 
 export interface ApplicantProfile {
@@ -88,6 +163,7 @@ export interface ApplicantProfile {
   fullName: string;
   persona: string;
   passportId: string;
+  city: string;
   verificationStatus: 'Verified' | 'Pending Records' | 'Under Review';
   profileCompletion: number;
   monthlyAverageInflow: number;
@@ -106,5 +182,5 @@ export interface ToastMessage {
   id: string;
   title: string;
   description: string;
-  type?: 'success' | 'info' | 'warning';
+  type?: 'success' | 'info' | 'warning' | 'error';
 }

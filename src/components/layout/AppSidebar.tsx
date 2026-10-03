@@ -12,6 +12,7 @@ import {
   ExternalLink,
   ChevronRight,
   Sparkles,
+  Calculator,
   X
 } from 'lucide-react';
 import { useNexus } from '../../context/NexusContext';
@@ -27,12 +28,13 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen = false, onClose 
   const navigate = useNavigate();
 
   const mainNav = [
-    { name: 'Overview', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'My Trust Passport', path: '/passport', icon: ShieldCheck },
-    { name: 'Financial Insights', path: '/insights', icon: TrendingUp },
+    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { name: 'Trust Passport', path: '/passport', icon: ShieldCheck },
+    { name: 'AI Insights', path: '/insights', icon: TrendingUp },
     { name: 'Transactions', path: '/transactions', icon: ReceiptText },
+    { name: 'Cash Flow Forecast', path: '/forecast', icon: Calculator },
     { name: 'Financial Records', path: '/records', icon: FolderArchive },
-    { name: 'Privacy & Sharing', path: '/privacy', icon: KeyRound },
+    { name: 'Privacy & Consent', path: '/privacy', icon: KeyRound },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
@@ -66,8 +68,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen = false, onClose 
               <div className="text-base font-bold tracking-tight text-slate-900 leading-tight">
                 NEXUS
               </div>
-              <div className="text-[11px] font-medium text-slate-400 tracking-wider uppercase">
-                Trust Network
+              <div className="text-[10px] font-medium text-blue-600 tracking-wider uppercase">
+                Trust Passport
               </div>
             </div>
           </button>
@@ -112,7 +114,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen = false, onClose 
             </nav>
           </div>
 
-          {/* Institutional Portal Switcher */}
+          {/* Institutional Partner Portal Switcher */}
           <div>
             <div className="px-3 mb-2 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
               Partner Network
@@ -161,7 +163,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen = false, onClose 
               </span>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed mb-2.5">
-              Profile completion is at <strong className="text-slate-800 font-semibold">{user.profileCompletion}%</strong>. All 5 records authenticated.
+              Profile completion is at <strong className="text-slate-800 font-semibold">{user.profileCompletion}%</strong>. 6 verified Indian records.
             </p>
             <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mb-2.5">
               <div 
@@ -191,11 +193,14 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen = false, onClose 
               referrerPolicy="no-referrer"
             />
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-semibold text-slate-900 truncate">
-                {user.name}
+              <div className="flex items-center gap-1">
+                <span className="text-xs font-semibold text-slate-900 truncate">
+                  {user.name}
+                </span>
+                <span className="text-[9px] bg-amber-100 text-amber-800 px-1 rounded font-medium">Demo</span>
               </div>
-              <div className="text-[11px] text-slate-500 font-mono truncate">
-                {user.passportId}
+              <div className="text-[10px] text-slate-500 truncate">
+                {user.city}, India
               </div>
             </div>
           </div>

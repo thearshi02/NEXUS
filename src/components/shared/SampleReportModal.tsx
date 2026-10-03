@@ -10,9 +10,10 @@ import {
   Lock 
 } from 'lucide-react';
 import { useNexus } from '../../context/NexusContext';
+import { formatINR } from '../../utils/formatters';
 
 export const SampleReportModal: React.FC = () => {
-  const { isReportModalOpen, setIsReportModalOpen, user, cashFlowData, records, showToast } = useNexus();
+  const { isReportModalOpen, setIsReportModalOpen, user, monthlyInflow, monthlyOutflow, estimatedSavings, savingsRate, cashFlowData, records, showToast } = useNexus();
   const reportRef = useRef<HTMLDivElement>(null);
 
   if (!isReportModalOpen) return null;
@@ -33,7 +34,7 @@ export const SampleReportModal: React.FC = () => {
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4 text-blue-600" />
             <span className="text-xs font-bold text-slate-800">
-              Trust Dossier — Financial Credibility Certificate
+              NEXUS Financial Trust Dossier — Verification Certificate
             </span>
           </div>
 
@@ -71,11 +72,11 @@ export const SampleReportModal: React.FC = () => {
                   NEXUS
                 </span>
                 <span className="text-xs font-mono font-medium text-slate-400">
-                  / Alternative Financial Verification Dossier
+                  / Financial Trust Passport Verification Dossier
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Cryptographically authenticated alternative cash-flow evaluation.
+                Cryptographically authenticated cash-flow evaluation for {user.city}, Uttar Pradesh (India).
               </p>
             </div>
 
@@ -84,7 +85,7 @@ export const SampleReportModal: React.FC = () => {
               <div>DATE OF ISSUANCE: <strong>{user.lastUpdated}</strong></div>
               <div className="text-emerald-700 font-semibold flex items-center sm:justify-end gap-1 mt-0.5">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                VERIFIED STATUS
+                VERIFIED IDENTITY
               </div>
             </div>
           </div>
@@ -100,76 +101,68 @@ export const SampleReportModal: React.FC = () => {
               <div className="text-xs font-medium text-slate-800 mt-0.5">{user.personaTitle}</div>
             </div>
             <div>
-              <div className="text-[11px] text-slate-400 uppercase font-medium">Completeness</div>
-              <div className="text-xs font-bold text-slate-900 mt-0.5 font-mono">{user.profileCompletion}% Authenticated</div>
+              <div className="text-[11px] text-slate-400 uppercase font-medium">Location</div>
+              <div className="text-xs font-medium text-slate-800 mt-0.5">{user.city}, India</div>
             </div>
             <div>
-              <div className="text-[11px] text-slate-400 uppercase font-medium">Verification Engine</div>
-              <div className="text-xs font-medium text-slate-800 mt-0.5">SHA-256 Ledger Audit</div>
+              <div className="text-[11px] text-slate-400 uppercase font-medium">Monthly Inflow Run-Rate</div>
+              <div className="text-xs font-bold font-mono text-blue-700 mt-0.5">{formatINR(monthlyInflow)}/mo</div>
             </div>
           </div>
 
-          {/* Core Quantitative Summary */}
-          <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
-              01. 6-Month Rolling Financial Performance Metrics
-            </h4>
+          {/* Quantitative Financial Reliability Metrics */}
+          <div className="space-y-2">
+            <h3 className="font-bold text-xs uppercase tracking-wider text-slate-500">
+              Verified Quantitative Trust Indicators
+            </h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 border border-slate-200 rounded-lg">
-                <div className="text-[11px] text-slate-500 font-medium">Average Monthly Inflow</div>
-                <div className="text-sm font-bold text-slate-900 font-mono tabular-nums mt-1">
-                  ${user.inflowAverage.toLocaleString()}
-                </div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Across verified feeds</div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                <span className="text-[10px] text-slate-400 block font-mono">Monthly Inflow</span>
+                <span className="font-bold font-mono text-slate-900 text-sm mt-0.5 block">{formatINR(monthlyInflow)}</span>
+                <span className="text-[10px] text-emerald-700 font-medium">+12.5% vs 6-mo base</span>
               </div>
-              <div className="p-3 border border-slate-200 rounded-lg">
-                <div className="text-[11px] text-slate-500 font-medium">Average Monthly Outflow</div>
-                <div className="text-sm font-bold text-slate-900 font-mono tabular-nums mt-1">
-                  ${user.outflowAverage.toLocaleString()}
-                </div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Operating expenditures</div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                <span className="text-[10px] text-slate-400 block font-mono">Monthly Outflow</span>
+                <span className="font-bold font-mono text-slate-900 text-sm mt-0.5 block">{formatINR(monthlyOutflow)}</span>
+                <span className="text-[10px] text-slate-500">63.3% expense ratio</span>
               </div>
-              <div className="p-3 border border-slate-200 rounded-lg">
-                <div className="text-[11px] text-slate-500 font-medium">Net Monthly Reserve Add</div>
-                <div className="text-sm font-bold text-emerald-700 font-mono tabular-nums mt-1">
-                  +${(user.inflowAverage - user.outflowAverage).toLocaleString()}
-                </div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Positive accumulation</div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                <span className="text-[10px] text-slate-400 block font-mono">Net Savings</span>
+                <span className="font-bold font-mono text-emerald-600 text-sm mt-0.5 block">+{formatINR(estimatedSavings)}/mo</span>
+                <span className="text-[10px] text-slate-500">{savingsRate.toFixed(1)}% savings rate</span>
               </div>
-              <div className="p-3 border border-slate-200 rounded-lg">
-                <div className="text-[11px] text-slate-500 font-medium">Inflow Consistency Factor</div>
-                <div className="text-sm font-bold text-blue-700 font-mono tabular-nums mt-1">
-                  {user.consistencyScore}% Stable
-                </div>
-                <div className="text-[10px] text-slate-400 mt-0.5">&lt; 7% monthly variance</div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                <span className="text-[10px] text-slate-400 block font-mono">Inflow Stability</span>
+                <span className="font-bold font-mono text-blue-700 text-sm mt-0.5 block">{user.incomeConsistencyScore || 86}%</span>
+                <span className="text-[10px] text-slate-500">Low monthly variance</span>
               </div>
             </div>
           </div>
 
-          {/* Cashflow Breakdown Table */}
-          <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-              02. Authenticated Monthly Cash-Flow Summary
-            </h4>
-            <div className="border border-slate-200 rounded-lg overflow-hidden">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-50 text-[11px] font-semibold text-slate-500 border-b border-slate-200">
+          {/* 6-Month Cash Flow Table */}
+          <div className="space-y-2">
+            <h3 className="font-bold text-xs uppercase tracking-wider text-slate-500">
+              6-Month Rolling Cash-Flow Ledger (INR ₹)
+            </h3>
+            <div className="border border-slate-200 rounded-xl overflow-hidden">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 text-[10px] uppercase font-semibold">
+                  <tr>
                     <th className="py-2 px-3">Period</th>
-                    <th className="py-2 px-3 text-right">Inflow ($)</th>
-                    <th className="py-2 px-3 text-right">Outflow ($)</th>
-                    <th className="py-2 px-3 text-right">Net Reserve ($)</th>
-                    <th className="py-2 px-3 text-center">Stability Rating</th>
+                    <th className="py-2 px-3">Verified Inflow</th>
+                    <th className="py-2 px-3">Operating Outflow</th>
+                    <th className="py-2 px-3">Net Surplus</th>
+                    <th className="py-2 px-3">Consistency</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-mono">
-                  {cashFlowData.map((row) => (
-                    <tr key={row.month} className="hover:bg-slate-50/50">
-                      <td className="py-2 px-3 font-sans font-medium text-slate-900">{row.month}</td>
-                      <td className="py-2 px-3 text-right text-emerald-700 tabular-nums">${row.inflow.toLocaleString()}</td>
-                      <td className="py-2 px-3 text-right text-slate-700 tabular-nums">${row.outflow.toLocaleString()}</td>
-                      <td className="py-2 px-3 text-right text-blue-700 tabular-nums">+${row.netSavings.toLocaleString()}</td>
-                      <td className="py-2 px-3 text-center text-slate-600 font-sans">{row.consistencyScore}% High</td>
+                  {cashFlowData.map((m) => (
+                    <tr key={m.month}>
+                      <td className="py-2 px-3 font-sans font-medium text-slate-800">{m.month}</td>
+                      <td className="py-2 px-3 text-blue-700 font-bold">{formatINR(m.inflow)}</td>
+                      <td className="py-2 px-3 text-slate-600">{formatINR(m.outflow)}</td>
+                      <td className="py-2 px-3 text-emerald-700 font-bold">+{formatINR(m.inflow - m.outflow)}</td>
+                      <td className="py-2 px-3 font-semibold text-slate-700">{m.consistencyScore}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -177,56 +170,37 @@ export const SampleReportModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Verified Evidence Sources */}
-          <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-              03. Primary Records & Corroborating Data Feeds
-            </h4>
-            <div className="space-y-1.5">
-              {records.slice(0, 4).map((rec) => (
-                <div key={rec.id} className="p-2.5 rounded-lg border border-slate-200/80 bg-slate-50/50 flex items-center justify-between">
+          {/* Verified Evidence Records */}
+          <div className="space-y-2">
+            <h3 className="font-bold text-xs uppercase tracking-wider text-slate-500">
+              Indexed Evidence Records ({records.length})
+            </h3>
+            <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+              {records.map((r) => (
+                <div key={r.id} className="p-3 flex items-center justify-between text-xs hover:bg-slate-50">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                     <div>
-                      <div className="font-semibold text-slate-900 text-xs">{rec.title}</div>
-                      <div className="text-[11px] text-slate-500 font-mono">
-                        Source: {rec.source} · Ref: {rec.referenceId} · Date: {rec.date}
-                      </div>
+                      <span className="font-bold text-slate-900">{r.title}</span>
+                      <span className="text-[11px] text-slate-500 ml-2 font-mono">({r.source} • {r.referenceId})</span>
                     </div>
                   </div>
-                  <span className="font-mono font-semibold text-slate-900 text-xs">
-                    ${rec.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </span>
+                  <span className="font-bold font-mono text-slate-900">{formatINR(r.amount)}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Mandatory Regulatory & Privacy Disclaimer */}
-          <div className="p-4 bg-amber-50/50 border border-amber-200 rounded-xl space-y-2 text-[11px] text-amber-900">
-            <div className="flex items-center gap-2 font-bold text-amber-950">
-              <AlertCircle className="w-4 h-4 text-amber-700" />
-              Regulatory & Evaluation Disclosure
+          {/* Legal Compliance & Non-Lender Disclaimer */}
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-500 space-y-1">
+            <div className="flex items-center gap-1.5 font-bold text-slate-700">
+              <Lock className="w-3.5 h-3.5 text-blue-600" />
+              <span>NEXUS Trust Protocol Compliance & Disclaimer</span>
             </div>
             <p className="leading-relaxed">
-              <strong>Informational Notice: </strong> These alternative financial metrics, cash-flow indicators, and passport analyses are informational summaries compiled with the user's explicit consent. NEXUS is not a consumer reporting agency under the Fair Credit Reporting Act (FCRA). This dossier does not constitute a formal credit score, credit rating, guaranteed approval, or lending commitment. Institutional underwriters must perform independent verification and underwriting in accordance with applicable laws.
+              This report contains user-consented financial information organized deterministically from verified bank statements and UPI payment feeds. NEXUS is not a credit rating agency, credit bureau, or lender. This dossier does not represent a loan approval guarantee or credit score calculation.
             </p>
-            <div className="pt-1 text-slate-600 font-mono text-[10px] flex items-center gap-1">
-              <Lock className="w-3 h-3 text-slate-400" />
-              Your financial information is shared only with your explicit permission. Scoped session token.
-            </div>
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-[11px] text-slate-500">
-          <span>Signed via NEXUS Trust Network Protocol</span>
-          <button
-            onClick={() => setIsReportModalOpen(false)}
-            className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg text-xs font-medium transition-colors"
-          >
-            Close Dossier
-          </button>
         </div>
       </div>
     </div>

@@ -6,10 +6,10 @@ import {
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  Tooltip, 
-  Legend 
+  Tooltip 
 } from 'recharts';
 import { MonthlyCashFlow } from '../../types';
+import { formatINR, formatCompactINR } from '../../utils/formatters';
 
 interface CashFlowChartProps {
   data: MonthlyCashFlow[];
@@ -21,6 +21,8 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data }) => {
 
   const filteredData = timeRange === '3m' ? data.slice(-3) : data;
 
+  const totalCumulativeNet = filteredData.reduce((acc, curr) => acc + (curr.inflow - curr.outflow), 0);
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const inflow = payload.find((p: any) => p.dataKey === 'inflow')?.value || 0;
@@ -28,21 +30,21 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data }) => {
       const net = inflow - outflow;
 
       return (
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xl text-xs space-y-1.5 min-w-[170px]">
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xl text-xs space-y-1.5 min-w-[190px]">
           <div className="font-bold text-slate-900 border-b border-slate-100 pb-1">
             {label}
           </div>
           <div className="flex items-center justify-between font-mono text-[11px]">
             <span className="text-slate-500">Recorded Inflow:</span>
-            <span className="font-semibold text-blue-600 tabular-nums">${inflow.toLocaleString()}</span>
+            <span className="font-semibold text-blue-600 tabular-nums">{formatINR(inflow)}</span>
           </div>
           <div className="flex items-center justify-between font-mono text-[11px]">
             <span className="text-slate-500">Recorded Outflow:</span>
-            <span className="font-semibold text-slate-700 tabular-nums">${outflow.toLocaleString()}</span>
+            <span className="font-semibold text-slate-700 tabular-nums">{formatINR(outflow)}</span>
           </div>
           <div className="flex items-center justify-between font-mono text-[11px] pt-1 border-t border-slate-100">
             <span className="text-slate-700 font-medium">Net Addition:</span>
-            <span className="font-bold text-emerald-700 tabular-nums">+${net.toLocaleString()}</span>
+            <span className="font-bold text-emerald-700 tabular-nums">+{formatINR(net)}</span>
           </div>
         </div>
       );
@@ -56,10 +58,10 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data }) => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h3 className="text-sm font-bold text-slate-900">
-            Cash-Flow Trajectory (6-Month Rolling)
+            Monthly Cash-Flow Trajectory (INR ₹)
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            Verified monthly inflows vs. operating expenditures across all connected accounts.
+            Verified monthly inflows vs. operating expenditures across UPI, bank accounts, and client retainers.
           </p>
         </div>
 
@@ -127,7 +129,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data }) => {
       {/* Recharts Container */}
       <div className="h-64 sm:h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={filteredData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <BarChart data={filteredData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
             <XAxis 
               dataKey="month" 
@@ -141,7 +143,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data }) => {
               fontSize={11} 
               tickLine={false} 
               axisLine={false}
-              tickFormatter={(v) => `$${v / 1000}k`}
+              tickFormatter={(v) => formatCompactINR(v)}
             />
             <Tooltip content={<CustomTooltip />} />
             {(filterMode === 'all' || filterMode === 'inflow') && (
@@ -171,16 +173,16 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data }) => {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-xs bg-blue-600 inline-block" />
-            <span className="font-medium text-slate-700">Gross Inflow</span>
+            <span className="font-medium text-slate-700">Gross Inflow (₹)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-xs bg-slate-400 inline-block" />
-            <span className="font-medium text-slate-700">Operating Outflow</span>
+            <span className="font-medium text-slate-700">Operating Outflow (₹)</span>
           </div>
         </div>
 
-        <div className="font-mono text-[11px] text-slate-400">
-          6-Month Cumulative Additions: <strong className="text-slate-800 font-semibold">+$24,100</strong>
+        <div className="font-mono text-[11px] text-slate-500">
+          Cumulative Net Additions: <strong className="text-emerald-700 font-semibold">+{formatINR(totalCumulativeNet)}</strong>
         </div>
       </div>
     </div>

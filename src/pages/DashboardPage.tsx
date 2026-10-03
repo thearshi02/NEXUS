@@ -2,56 +2,85 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ShieldCheck, 
-  ArrowUpRight, 
   ArrowRight, 
   Sparkles, 
-  Calendar, 
-  DollarSign, 
   TrendingUp, 
-  Lock, 
   AlertCircle,
   FileText,
-  CheckCircle2,
   PieChart,
-  Layers
+  Wallet,
+  ArrowDownRight,
+  ArrowUpRight,
+  RefreshCw,
+  PlusCircle,
+  Calculator,
+  Building2,
+  Lock
 } from 'lucide-react';
 import { useNexus } from '../context/NexusContext';
 import { MetricCard } from '../components/shared/MetricCard';
 import { CashFlowChart } from '../components/shared/CashFlowChart';
 import { InsightCard } from '../components/shared/InsightCard';
+import { formatINR, formatIndianDate, formatPercentage } from '../utils/formatters';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { 
     user, 
+    transactions,
     cashFlowData, 
     insights, 
     records, 
+    monthlyInflow,
+    monthlyOutflow,
+    estimatedSavings,
+    savingsRate,
+    aiEngineMode,
+    isAiRefreshing,
+    refreshAiInsights,
     setIsShareModalOpen, 
     setIsReportModalOpen 
   } = useNexus();
 
+  const recentTransactions = transactions.slice(0, 5);
+
   return (
-    <div className="space-y-6">
-      {/* Welcome Banner */}
+    <div className="space-y-6 pb-8">
+      {/* Top Banner & Greeting */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-            Good morning, {user.name.split(' ')[0]}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+              Welcome back, {user.name}
+            </h1>
+            <span className="px-2 py-0.5 text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200 rounded-md">
+              Demo Account
+            </span>
+          </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Here is a simple overview of your financial profile.
+            Your structured financial intelligence overview for {user.city}, Uttar Pradesh.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => refreshAiInsights()}
+            disabled={isAiRefreshing}
+            className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs disabled:opacity-60"
+            title="Re-run AI financial intelligence analysis"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-blue-600 ${isAiRefreshing ? 'animate-spin' : ''}`} />
+            <span>{isAiRefreshing ? 'Analyzing...' : 'Refresh AI'}</span>
+          </button>
+          
           <button
             onClick={() => setIsReportModalOpen(true)}
-            className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
+            className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
           >
             <FileText className="w-3.5 h-3.5 text-slate-500" />
-            <span>View Sample Report</span>
+            <span>Sample Report</span>
           </button>
+
           <button
             onClick={() => setIsShareModalOpen(true)}
             className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
@@ -62,7 +91,7 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Component A: Financial Profile Card */}
+      {/* Financial Identity Hero Card */}
       <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex items-start sm:items-center gap-4">
@@ -77,27 +106,32 @@ export const DashboardPage: React.FC = () => {
                 <h2 className="text-base font-bold text-slate-900">
                   {user.name}
                 </h2>
-                <span className="text-[11px] font-mono font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                <span className="text-[11px] font-mono font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
                   {user.verificationStatus}
+                </span>
+                <span className="text-[11px] font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200/60">
+                  {user.city}, India
                 </span>
               </div>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
                 {user.personaTitle}
               </p>
-              <div className="flex items-center gap-3 mt-1.5 text-[11px] text-slate-400 font-mono">
+              <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[11px] text-slate-400 font-mono">
                 <span>Passport ID: <strong className="text-slate-700">{user.passportId}</strong></span>
+                <span aria-hidden="true">·</span>
+                <span>Income Range: <strong className="text-slate-700">{user.monthlyIncomeRange}</strong></span>
                 <span aria-hidden="true">·</span>
                 <span>Last updated: {user.lastUpdated}</span>
               </div>
             </div>
           </div>
 
-          {/* Profile Completion & Quick Action */}
+          {/* Profile Completion Progress & CTA */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 lg:w-96">
             <div className="flex-1 bg-slate-50 border border-slate-200/80 rounded-xl p-3">
               <div className="flex items-center justify-between text-xs mb-1.5">
-                <span className="font-semibold text-slate-700">Profile Completion</span>
-                <span className="font-bold text-blue-600 font-mono tabular-nums">{user.profileCompletion}%</span>
+                <span className="font-semibold text-slate-700">Trust Passport Completion</span>
+                <span className="font-bold text-blue-700 font-mono tabular-nums">{user.profileCompletion}%</span>
               </div>
               <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                 <div
@@ -106,8 +140,8 @@ export const DashboardPage: React.FC = () => {
                 />
               </div>
               <div className="text-[10px] text-slate-500 mt-1.5 flex items-center justify-between">
-                <span>5 of 5 records indexed</span>
-                <span className="text-emerald-700 font-medium">Ready to share</span>
+                <span>{records.length} of 6 records verified</span>
+                <span className="text-emerald-700 font-semibold">Consent Ready</span>
               </div>
             </div>
 
@@ -122,59 +156,96 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Component B: Financial Overview Metrics */}
+      {/* Financial Summary Cards (Values in INR ₹) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
-          label="Monthly Inflow"
-          value={`$${user.inflowAverage.toLocaleString()}`}
-          subtext="6-month rolling avg"
-          trend={{ value: '+14.2%', isPositive: true, period: 'vs prior base' }}
-          icon={<DollarSign className="w-4 h-4" />}
+          label="Monthly Income"
+          value={formatINR(monthlyInflow)}
+          subtext="Active freelance inflow (Demo)"
+          trend={{ value: '+12.5%', isPositive: true, period: 'vs 3-mo avg' }}
+          icon={<Wallet className="w-4 h-4 text-blue-600" />}
         />
         <MetricCard
-          label="Monthly Outflow"
-          value={`$${user.outflowAverage.toLocaleString()}`}
-          subtext="Operating expenses"
-          trend={{ value: '53.9%', isPositive: true, period: 'healthy ratio' }}
-          icon={<TrendingUp className="w-4 h-4" />}
+          label="Monthly Expenses"
+          value={formatINR(monthlyOutflow)}
+          subtext="Rent, utilities & lifestyle"
+          trend={{ value: '63.3%', isPositive: true, period: 'expense ratio' }}
+          icon={<ArrowDownRight className="w-4 h-4 text-slate-500" />}
         />
         <MetricCard
-          label="Net Savings Trend"
-          value={`+$${(user.inflowAverage - user.outflowAverage).toLocaleString()}`}
-          subtext="Monthly reserve addition"
-          trend={{ value: '+$4.1k/mo', isPositive: true, period: 'surplus' }}
-          icon={<PieChart className="w-4 h-4" />}
+          label="Estimated Savings"
+          value={formatINR(estimatedSavings)}
+          subtext="Liquid monthly surplus"
+          trend={{ value: `+${formatINR(estimatedSavings)}`, isPositive: true, period: 'retained' }}
+          icon={<PieChart className="w-4 h-4 text-emerald-600" />}
         />
         <MetricCard
-          label="Cash-Flow Consistency"
-          value={`${user.consistencyScore}%`}
-          subtext="Stability benchmark"
-          trend={{ value: '< 7%', isPositive: true, period: 'low variance' }}
-          icon={<ShieldCheck className="w-4 h-4" />}
+          label="Savings Rate"
+          value={formatPercentage(savingsRate)}
+          subtext="Healthy Indian freelancer buffer"
+          trend={{ value: '> 20%', isPositive: true, period: 'target met' }}
+          icon={<TrendingUp className="w-4 h-4 text-blue-600" />}
         />
       </div>
 
-      {/* Component C: Cash-Flow Chart */}
+      {/* Cash Flow Chart & Trend */}
       <CashFlowChart data={cashFlowData} />
 
-      {/* Grid: Insights (Component D) + Profile Breakdown (Component E) */}
+      {/* Quick Actions Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <button
+          onClick={() => navigate('/transactions')}
+          className="p-3 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-xl flex items-center gap-2.5 text-left text-xs font-semibold text-slate-800 transition-colors shadow-2xs"
+        >
+          <PlusCircle className="w-4 h-4 text-blue-600 shrink-0" />
+          <span>Add / Edit Transactions</span>
+        </button>
+        <button
+          onClick={() => navigate('/forecast')}
+          className="p-3 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-xl flex items-center gap-2.5 text-left text-xs font-semibold text-slate-800 transition-colors shadow-2xs"
+        >
+          <Calculator className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>6-Month Forecast</span>
+        </button>
+        <button
+          onClick={() => navigate('/privacy')}
+          className="p-3 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-xl flex items-center gap-2.5 text-left text-xs font-semibold text-slate-800 transition-colors shadow-2xs"
+        >
+          <Lock className="w-4 h-4 text-purple-600 shrink-0" />
+          <span>Consent & Sharing</span>
+        </button>
+        <button
+          onClick={() => navigate('/partner-portal')}
+          className="p-3 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-xl flex items-center gap-2.5 text-left text-xs font-semibold text-slate-800 transition-colors shadow-2xs"
+        >
+          <Building2 className="w-4 h-4 text-teal-600 shrink-0" />
+          <span>Institution Portal</span>
+        </button>
+      </div>
+
+      {/* Dual Column: AI Insights & Recent Transactions */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Component D: Financial Insights */}
+        {/* Left Column: AI Financial Insights */}
         <div className="lg:col-span-7 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">
-                AI Financial Insights
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900">
+                  AI Financial Insights
+                </h3>
+                <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                  {aiEngineMode === 'gemini_ai' ? 'Gemini 2.0' : 'Deterministic Engine'}
+                </span>
+              </div>
               <p className="text-xs text-slate-500">
-                Pattern explanations derived from authenticated transactions.
+                Pattern explanations derived from authenticated UPI and bank transfers.
               </p>
             </div>
             <button
               onClick={() => navigate('/insights')}
               className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
             >
-              View all 4 insights →
+              All insights →
             </button>
           </div>
 
@@ -184,98 +255,93 @@ export const DashboardPage: React.FC = () => {
             ))}
           </div>
 
-          {/* Informational Disclaimer */}
-          <div className="p-3 bg-slate-100 rounded-xl border border-slate-200 text-[11px] text-slate-500 flex items-start gap-2">
+          {/* Non-Lender Informational Disclaimer */}
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-[11px] text-slate-500 flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
             <p>
-              <strong>Informational Disclaimer: </strong> These insights are informational and do not constitute a credit decision, credit score, or formal financial advice.
+              <strong>Informational Disclaimer:</strong> NEXUS is an explainable financial identity platform, not a credit bureau or lender. These insights do not guarantee credit or loan approval.
             </p>
           </div>
         </div>
 
-        {/* Component E: Financial Profile Breakdown */}
+        {/* Right Column: Recent Transactions & Health Breakdown */}
         <div className="lg:col-span-5 space-y-4">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900">
-              Financial Profile Breakdown
-            </h3>
-            <p className="text-xs text-slate-500">
-              Underlying indicators evaluated by institutional reviewers.
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">
+                Recent Transactions
+              </h3>
+              <p className="text-xs text-slate-500">
+                Live entries in Indian Rupees (₹)
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/transactions')}
+              className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+            >
+              View ledger →
+            </button>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200/90 p-5 space-y-4 shadow-2xs">
-            {/* Income consistency */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-800">Income Consistency</span>
-                <span className="font-mono font-bold text-emerald-700">High (94%)</span>
+          <div className="bg-white rounded-xl border border-slate-200/90 divide-y divide-slate-100 shadow-2xs overflow-hidden">
+            {recentTransactions.map((tx) => (
+              <div key={tx.id} className="p-3 hover:bg-slate-50/70 transition-colors flex items-center justify-between">
+                <div className="min-w-0 flex-1 pr-3">
+                  <div className="text-xs font-semibold text-slate-800 truncate">
+                    {tx.title}
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400">
+                    <span className="font-medium text-slate-500">{tx.category}</span>
+                    <span>•</span>
+                    <span className="font-mono">{tx.paymentMethod}</span>
+                    <span>•</span>
+                    <span>{formatIndianDate(tx.date)}</span>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className={`text-xs font-bold font-mono ${tx.type === 'inflow' ? 'text-emerald-600' : 'text-slate-800'}`}>
+                    {tx.type === 'inflow' ? '+' : '-'}{formatINR(tx.amount)}
+                  </div>
+                  <span className="text-[9px] text-slate-400 font-mono">Settled</span>
+                </div>
               </div>
-              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-emerald-600 h-full rounded-full" style={{ width: '94%' }} />
+            ))}
+          </div>
+
+          {/* Explainable Health Indicators Summary */}
+          <div className="bg-white rounded-xl border border-slate-200/90 p-4 space-y-3 shadow-2xs">
+            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider text-slate-400">
+              Explainable Trust Indicators
+            </h4>
+            
+            <div className="space-y-1 text-xs">
+              <div className="flex justify-between font-medium">
+                <span className="text-slate-700">Income Consistency</span>
+                <span className="text-emerald-700 font-bold">86/100 (Strong)</span>
               </div>
-              <p className="text-[11px] text-slate-500">
-                Recurring monthly payouts received across Stripe and Upwork.
-              </p>
+              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                <div className="bg-emerald-600 h-full rounded-full" style={{ width: '86%' }} />
+              </div>
             </div>
 
-            {/* Savings pattern */}
-            <div className="space-y-1.5 pt-3 border-t border-slate-100">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-800">Savings Pattern</span>
-                <span className="font-mono font-bold text-blue-700">Positive (+46%)</span>
+            <div className="space-y-1 text-xs">
+              <div className="flex justify-between font-medium">
+                <span className="text-slate-700">Savings Behavior</span>
+                <span className="text-blue-700 font-bold">82/100 (Disciplined)</span>
               </div>
-              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-blue-600 h-full rounded-full" style={{ width: '86%' }} />
+              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                <div className="bg-blue-600 h-full rounded-full" style={{ width: '82%' }} />
               </div>
-              <p className="text-[11px] text-slate-500">
-                Average monthly surplus of $4,000 kept in operating checking.
-              </p>
             </div>
 
-            {/* Expense management */}
-            <div className="space-y-1.5 pt-3 border-t border-slate-100">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-800">Expense Management</span>
-                <span className="font-mono font-bold text-slate-800">Disciplined (53.9%)</span>
+            <div className="space-y-1 text-xs">
+              <div className="flex justify-between font-medium">
+                <span className="text-slate-700">Expense Management</span>
+                <span className="text-slate-800 font-bold">84/100 (Balanced)</span>
               </div>
-              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-slate-700 h-full rounded-full" style={{ width: '78%' }} />
+              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                <div className="bg-slate-700 h-full rounded-full" style={{ width: '84%' }} />
               </div>
-              <p className="text-[11px] text-slate-500">
-                Outflows well within sustainable operating revenue thresholds.
-              </p>
-            </div>
-
-            {/* Record completeness */}
-            <div className="space-y-1.5 pt-3 border-t border-slate-100">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-800">Record Completeness</span>
-                <span className="font-mono font-bold text-blue-700">92%</span>
-              </div>
-              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-blue-600 h-full rounded-full" style={{ width: '92%' }} />
-              </div>
-              <p className="text-[11px] text-slate-500">
-                5 authenticated proof records on file. Zero overdraft flags.
-              </p>
-            </div>
-
-            <div className="pt-2 space-y-2">
-              <button
-                onClick={() => navigate('/transactions')}
-                className="w-full py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
-              >
-                <span>Filter Historical Transactions Ledger</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => navigate('/records')}
-                className="w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
-              >
-                <span>Manage Connected Feeds & Records</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
             </div>
           </div>
         </div>

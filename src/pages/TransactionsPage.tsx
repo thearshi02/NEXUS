@@ -5,641 +5,672 @@ import {
   Download, 
   Plus, 
   CheckCircle2, 
-  Clock, 
-  CreditCard, 
-  ExternalLink,
-  DollarSign,
-  TrendingUp,
+  Trash2, 
+  Edit3, 
+  Search,
+  Filter,
+  X,
+  Calendar,
+  Wallet,
+  IndianRupee,
+  Receipt,
   FileSpreadsheet,
-  AlertCircle
+  RotateCcw
 } from 'lucide-react';
 import { useNexus } from '../context/NexusContext';
-import { FinancialTransaction, FilterState } from '../types';
-import { SearchFilterBar } from '../components/shared/SearchFilterBar';
-import { EmptyState } from '../components/shared/EmptyState';
-import { isWithinDateRange, parseDateToTime, formatCurrency } from '../utils/dateFilter';
+import { FinancialTransaction, TransactionCategory, PaymentMethod, FilterState } from '../types';
+import { formatINR, formatIndianDate } from '../utils/formatters';
+
+const ALL_CATEGORIES: TransactionCategory[] = [
+  'Freelance Payment',
+  'Client Retainer',
+  'Salary / Stipend',
+  'Platform Inflow',
+  'Rent & Housing',
+  'Groceries & Food',
+  'Utilities & Bills',
+  'Software & Tools',
+  'Coworking / Studio',
+  'Transportation',
+  'Dining & Outing',
+  'Mobile & Internet',
+  'Healthcare & Wellness',
+  'Education & Skill',
+  'Savings & Investments',
+  'General Expense'
+];
+
+const ALL_PAYMENT_METHODS: PaymentMethod[] = [
+  'UPI',
+  'Net Banking',
+  'IMPS / NEFT',
+  'Debit Card',
+  'Credit Card',
+  'Cash',
+  'Client Direct Payout'
+];
 
 export const TransactionsPage: React.FC = () => {
-  const { transactions, addTransaction, showToast } = useNexus();
+  const { 
+    transactions, 
+    addTransaction, 
+    updateTransaction, 
+    deleteTransaction, 
+    resetDemoData, 
+    exportUserData,
+    showToast 
+  } = useNexus();
 
   // Search & Filter State
-  const [filterState, setFilterState] = useState<FilterState>({
-    searchQuery: '',
-    datePreset: 'all',
-    startDate: '',
-    endDate: '',
-    category: 'all',
-    source: 'all',
-    minAmount: '',
-    maxAmount: '',
-    type: 'all',
-    status: 'all'
-  });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedType, setSelectedType] = useState<'all' | 'inflow' | 'outflow'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedMethod, setSelectedMethod] = useState<string>('all');
+  const [datePreset, setDatePreset] = useState<'all' | '30d' | '90d' | 'this_month'>('all');
 
-  // Sort State
-  const [sortBy, setSortBy] = useState<string>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  // Modal State for Add/Edit
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTx, setEditingTx] = useState<FinancialTransaction | null>(null);
 
-  // Detail Modal
-  const [selectedTx, setSelectedTx] = useState<FinancialTransaction | null>(null);
+  // Delete Confirmation Modal
+  const [deletingTxId, setDeletingTxId] = useState<string | null>(null);
 
-  // Quick Log Transaction Modal
-  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [newAmount, setNewAmount] = useState('');
-  const [newType, setNewType] = useState<'inflow' | 'outflow'>('inflow');
-  const [newCategory, setNewCategory] = useState<FinancialTransaction['category']>('Platform Inflow');
-  const [newSource, setNewSource] = useState<FinancialTransaction['source']>('Stripe');
-  const [newCounterparty, setNewCounterparty] = useState('');
-  const [newDate, setNewDate] = useState('2026-10-01');
+  // Form fields
+  const [formTitle, setFormTitle] = useState('');
+  const [formAmount, setFormAmount] = useState('');
+  const [formType, setFormType] = useState<'inflow' | 'outflow'>('inflow');
+  const [formCategory, setFormCategory] = useState<TransactionCategory>('Freelance Payment');
+  const [formPaymentMethod, setFormPaymentMethod] = useState<PaymentMethod>('UPI');
+  const [formSource, setFormSource] = useState<FinancialTransaction['source']>('UPI - Google Pay');
+  const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
+  const [formCounterparty, setFormCounterparty] = useState('');
+  const [formNotes, setFormNotes] = useState('');
 
-  // Extract unique categories & sources
-  const categories = useMemo(() => {
-    return Array.from(new Set(transactions.map((t) => t.category)));
-  }, [transactions]);
-
-  const sources = useMemo(() => {
-    return Array.from(new Set(transactions.map((t) => t.source)));
-  }, [transactions]);
-
-  // Filter & Sort
-  const filteredTransactions = useMemo(() => {
-    return transactions
-      .filter((tx) => {
-        // 1. Keyword search (title, counterparty, reference, source, category)
-        if (filterState.searchQuery.trim() !== '') {
-          const q = filterState.searchQuery.toLowerCase();
-          const matches = 
-            tx.title.toLowerCase().includes(q) ||
-            (tx.counterparty && tx.counterparty.toLowerCase().includes(q)) ||
-            tx.referenceId.toLowerCase().includes(q) ||
-            tx.source.toLowerCase().includes(q) ||
-            tx.category.toLowerCase().includes(q);
-          if (!matches) return false;
-        }
-
-        // 2. Type filter (inflow / outflow)
-        if (filterState.type && filterState.type !== 'all' && tx.type !== filterState.type) {
-          return false;
-        }
-
-        // 3. Category filter
-        if (filterState.category !== 'all' && tx.category !== filterState.category) {
-          return false;
-        }
-
-        // 4. Source filter
-        if (filterState.source !== 'all' && tx.source !== filterState.source) {
-          return false;
-        }
-
-        // 5. Date Range filter
-        if (!isWithinDateRange(tx.date, filterState.startDate, filterState.endDate)) {
-          return false;
-        }
-
-        // 6. Amount Range filter
-        if (filterState.minAmount !== '') {
-          const min = parseFloat(filterState.minAmount);
-          if (!isNaN(min) && tx.amount < min) return false;
-        }
-        if (filterState.maxAmount !== '') {
-          const max = parseFloat(filterState.maxAmount);
-          if (!isNaN(max) && tx.amount > max) return false;
-        }
-
-        return true;
-      })
-      .sort((a, b) => {
-        if (sortBy === 'amount') {
-          return sortOrder === 'asc' ? a.amount - b.amount : b.amount - a.amount;
-        }
-        if (sortBy === 'title') {
-          return sortOrder === 'asc' ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title);
-        }
-        // Default: Date
-        const timeA = parseDateToTime(a.date);
-        const timeB = parseDateToTime(b.date);
-        return sortOrder === 'asc' ? timeA - timeB : timeB - timeA;
-      });
-  }, [transactions, filterState, sortBy, sortOrder]);
-
-  // Aggregates for filtered view
-  const { totalInflow, totalOutflow, netPosition } = useMemo(() => {
-    let inflow = 0;
-    let outflow = 0;
-    filteredTransactions.forEach((t) => {
-      if (t.type === 'inflow') inflow += t.amount;
-      else outflow += t.amount;
-    });
-    return {
-      totalInflow: inflow,
-      totalOutflow: outflow,
-      netPosition: inflow - outflow
-    };
-  }, [filteredTransactions]);
-
-  const handleExportCSV = () => {
-    if (filteredTransactions.length === 0) {
-      showToast('No Data', 'No transactions match current filters.', 'warning');
-      return;
-    }
-
-    const headers = ['ID', 'Date', 'Title', 'Counterparty', 'Type', 'Amount', 'Category', 'Source', 'Status', 'Reference'];
-    const rows = filteredTransactions.map((t) => [
-      t.id,
-      t.date,
-      `"${t.title.replace(/"/g, '""')}"`,
-      `"${(t.counterparty || '').replace(/"/g, '""')}"`,
-      t.type,
-      (t.type === 'inflow' ? t.amount : -t.amount).toFixed(2),
-      t.category,
-      t.source,
-      t.status,
-      t.referenceId
-    ]);
-
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `nexus_transactions_${Date.now()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    showToast('Export Complete', `Downloaded ${filteredTransactions.length} transactions as CSV.`, 'success');
+  // Open Add Modal
+  const handleOpenAddModal = () => {
+    setEditingTx(null);
+    setFormTitle('');
+    setFormAmount('');
+    setFormType('inflow');
+    setFormCategory('Freelance Payment');
+    setFormPaymentMethod('UPI');
+    setFormSource('UPI - Google Pay');
+    setFormDate(new Date().toISOString().split('T')[0]);
+    setFormCounterparty('');
+    setFormNotes('');
+    setIsModalOpen(true);
   };
 
-  const handleCreateTx = (e: React.FormEvent) => {
+  // Open Edit Modal
+  const handleOpenEditModal = (tx: FinancialTransaction) => {
+    setEditingTx(tx);
+    setFormTitle(tx.title);
+    setFormAmount(tx.amount.toString());
+    setFormType(tx.type);
+    setFormCategory(tx.category);
+    setFormPaymentMethod(tx.paymentMethod);
+    setFormSource(tx.source);
+    setFormDate(tx.date);
+    setFormCounterparty(tx.counterparty || '');
+    setFormNotes(tx.notes || '');
+    setIsModalOpen(true);
+  };
+
+  // Submit Add / Edit
+  const handleSubmitForm = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle || !newAmount) {
-      showToast('Validation Error', 'Please supply a title and amount.', 'warning');
+    const amountNum = parseFloat(formAmount);
+    if (!formTitle.trim()) {
+      showToast('Validation Error', 'Transaction title is required.', 'error');
+      return;
+    }
+    if (isNaN(amountNum) || amountNum <= 0) {
+      showToast('Validation Error', 'Please enter a valid amount in INR (₹).', 'error');
       return;
     }
 
-    const amt = parseFloat(newAmount);
-    if (isNaN(amt) || amt <= 0) {
-      showToast('Invalid Amount', 'Please provide a valid positive amount.', 'warning');
-      return;
+    if (editingTx) {
+      updateTransaction(editingTx.id, {
+        title: formTitle.trim(),
+        amount: amountNum,
+        type: formType,
+        category: formCategory,
+        paymentMethod: formPaymentMethod,
+        source: formSource,
+        date: formDate,
+        counterparty: formCounterparty.trim() || undefined,
+        notes: formNotes.trim() || undefined,
+      });
+    } else {
+      addTransaction({
+        title: formTitle.trim(),
+        amount: amountNum,
+        type: formType,
+        category: formCategory,
+        paymentMethod: formPaymentMethod,
+        source: formSource,
+        date: formDate,
+        status: 'settled',
+        counterparty: formCounterparty.trim() || undefined,
+        notes: formNotes.trim() || undefined,
+        is_demo: false,
+      });
     }
 
-    addTransaction({
-      title: newTitle,
-      amount: amt,
-      type: newType,
-      category: newCategory,
-      source: newSource,
-      counterparty: newCounterparty || 'Direct Counterparty',
-      date: newDate || '2026-10-02',
-      status: 'settled'
-    });
-
-    setIsLogModalOpen(false);
-    setNewTitle('');
-    setNewAmount('');
-    setNewCounterparty('');
+    setIsModalOpen(false);
   };
+
+  // Confirm Delete
+  const handleConfirmDelete = () => {
+    if (deletingTxId) {
+      deleteTransaction(deletingTxId);
+      setDeletingTxId(null);
+    }
+  };
+
+  // Filtered list
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((tx) => {
+      // Search
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matches = 
+          tx.title.toLowerCase().includes(q) ||
+          tx.category.toLowerCase().includes(q) ||
+          tx.paymentMethod.toLowerCase().includes(q) ||
+          (tx.counterparty && tx.counterparty.toLowerCase().includes(q)) ||
+          (tx.notes && tx.notes.toLowerCase().includes(q)) ||
+          tx.referenceId.toLowerCase().includes(q);
+        if (!matches) return false;
+      }
+
+      // Type
+      if (selectedType !== 'all' && tx.type !== selectedType) {
+        return false;
+      }
+
+      // Category
+      if (selectedCategory !== 'all' && tx.category !== selectedCategory) {
+        return false;
+      }
+
+      // Payment method
+      if (selectedMethod !== 'all' && tx.paymentMethod !== selectedMethod) {
+        return false;
+      }
+
+      // Date Preset
+      if (datePreset !== 'all') {
+        const txTime = new Date(tx.date).getTime();
+        const now = Date.now();
+        const dayMs = 24 * 60 * 60 * 1000;
+        if (datePreset === '30d' && now - txTime > 30 * dayMs) return false;
+        if (datePreset === '90d' && now - txTime > 90 * dayMs) return false;
+      }
+
+      return true;
+    });
+  }, [transactions, searchQuery, selectedType, selectedCategory, selectedMethod, datePreset]);
+
+  // Dynamic KPI totals from filtered set
+  const filteredInflow = filteredTransactions
+    .filter(t => t.type === 'inflow')
+    .reduce((acc, t) => acc + t.amount, 0);
+
+  const filteredOutflow = filteredTransactions
+    .filter(t => t.type === 'outflow')
+    .reduce((acc, t) => acc + t.amount, 0);
+
+  const filteredNet = filteredInflow - filteredOutflow;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-6 pb-12">
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-            Historical Financial Transactions
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+              Transactions & Cash Flow Ledger
+            </h1>
+            <span className="px-2 py-0.5 text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 rounded-md">
+              Live INR (₹) Ledger
+            </span>
+          </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Real-time and authenticated historical line items verified across connected bank feeds and merchant platforms.
+            Full CRUD ledger tracking UPI, bank payouts, retainers, and living expenses for John Doe in Lucknow.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={handleExportCSV}
-            className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
+            onClick={() => exportUserData('csv')}
+            className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
           >
             <Download className="w-3.5 h-3.5 text-slate-500" />
             <span>Export CSV</span>
           </button>
+
           <button
-            onClick={() => setIsLogModalOpen(true)}
+            onClick={handleOpenAddModal}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Log Transaction</span>
+            <Plus className="w-4 h-4" />
+            <span>Add Transaction</span>
           </button>
         </div>
       </div>
 
-      {/* Aggregate Metric Cards (Dynamically sync with Date / Category / Amount filters) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-2xs">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-            Filtered Total Inflows
-          </span>
-          <div className="text-xl font-bold text-emerald-700 font-mono tabular-nums mt-1">
-            +${formatCurrency(totalInflow)}
+      {/* Summary KPI Bar */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="p-3.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
+          <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider block">Total Inflow</span>
+          <div className="text-lg font-bold text-emerald-600 font-mono mt-0.5">
+            +{formatINR(filteredInflow)}
           </div>
-          <div className="text-[11px] text-slate-500 mt-0.5">
-            Verified deposits in selected range
-          </div>
+          <span className="text-[10px] text-slate-400 font-medium">Filtered period</span>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-2xs">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-            Filtered Total Outflows
-          </span>
-          <div className="text-xl font-bold text-slate-800 font-mono tabular-nums mt-1">
-            -${formatCurrency(totalOutflow)}
+        <div className="p-3.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
+          <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider block">Total Outflow</span>
+          <div className="text-lg font-bold text-slate-800 font-mono mt-0.5">
+            -{formatINR(filteredOutflow)}
           </div>
-          <div className="text-[11px] text-slate-500 mt-0.5">
-            Operating costs & taxes
-          </div>
+          <span className="text-[10px] text-slate-400 font-medium">Operating expenses</span>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-2xs">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-            Net Surplus / Reserve
-          </span>
-          <div className={`text-xl font-bold font-mono tabular-nums mt-1 ${netPosition >= 0 ? 'text-blue-700' : 'text-red-600'}`}>
-            {netPosition >= 0 ? '+' : ''}${formatCurrency(netPosition)}
+        <div className="p-3.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
+          <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider block">Net Balance</span>
+          <div className={`text-lg font-bold font-mono mt-0.5 ${filteredNet >= 0 ? 'text-blue-700' : 'text-rose-600'}`}>
+            {filteredNet >= 0 ? '+' : ''}{formatINR(filteredNet)}
           </div>
-          <div className="text-[11px] text-slate-500 mt-0.5">
-            Cumulative net balance
-          </div>
+          <span className="text-[10px] text-slate-400 font-medium">Surplus retained</span>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-2xs">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-            Transactions Matched
-          </span>
-          <div className="text-xl font-bold text-slate-900 font-mono mt-1">
-            {filteredTransactions.length} <span className="text-xs text-slate-400 font-normal">of {transactions.length}</span>
+        <div className="p-3.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
+          <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider block">Entries Count</span>
+          <div className="text-lg font-bold text-slate-900 font-mono mt-0.5">
+            {filteredTransactions.length}
           </div>
-          <div className="text-[11px] text-slate-500 mt-0.5">
-            100% Cryptographically signed
-          </div>
+          <span className="text-[10px] text-slate-400 font-medium">All records editable</span>
         </div>
       </div>
 
-      {/* Comprehensive Search & Filter Bar */}
-      <SearchFilterBar
-        filterState={filterState}
-        onFilterChange={setFilterState}
-        categories={categories}
-        sources={sources}
-        showTypeFilter={true}
-        totalResults={transactions.length}
-        filteredCount={filteredTransactions.length}
-        placeholder="Search transactions by title, counterparty, reference, or category..."
-        sortBy={sortBy}
-        sortOrder={sortOrder}
-        onSortChange={(field, order) => {
-          setSortBy(field);
-          setSortOrder(order);
-        }}
-        sortOptions={[
-          { label: 'Date', value: 'date' },
-          { label: 'Amount', value: 'amount' },
-          { label: 'Title', value: 'title' }
-        ]}
-      />
+      {/* Search & Filter Bar */}
+      <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search by title, counterparty, reference ID, or notes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            />
+          </div>
+
+          {/* Type Segment */}
+          <div className="flex items-center p-0.5 bg-slate-100 rounded-lg text-xs font-semibold shrink-0">
+            <button
+              onClick={() => setSelectedType('all')}
+              className={`px-3 py-1.5 rounded-md transition-colors ${
+                selectedType === 'all' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              All Types
+            </button>
+            <button
+              onClick={() => setSelectedType('inflow')}
+              className={`px-3 py-1.5 rounded-md transition-colors ${
+                selectedType === 'inflow' ? 'bg-white text-emerald-700 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              Inflows (+)
+            </button>
+            <button
+              onClick={() => setSelectedType('outflow')}
+              className={`px-3 py-1.5 rounded-md transition-colors ${
+                selectedType === 'outflow' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              Outflows (-)
+            </button>
+          </div>
+        </div>
+
+        {/* Dropdown Filters */}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-hidden focus:border-blue-500"
+          >
+            <option value="all">All Categories</option>
+            {ALL_CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+
+          <select
+            value={selectedMethod}
+            onChange={(e) => setSelectedMethod(e.target.value)}
+            className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-hidden focus:border-blue-500"
+          >
+            <option value="all">All Payment Methods</option>
+            {ALL_PAYMENT_METHODS.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+
+          <select
+            value={datePreset}
+            onChange={(e) => setDatePreset(e.target.value as any)}
+            className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-hidden focus:border-blue-500"
+          >
+            <option value="all">All Dates</option>
+            <option value="30d">Last 30 Days</option>
+            <option value="90d">Last 90 Days</option>
+          </select>
+
+          {(searchQuery || selectedType !== 'all' || selectedCategory !== 'all' || selectedMethod !== 'all' || datePreset !== 'all') && (
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedType('all');
+                setSelectedCategory('all');
+                setSelectedMethod('all');
+                setDatePreset('all');
+              }}
+              className="px-2.5 py-1.5 text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Reset Filters</span>
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Transactions Table */}
-      {filteredTransactions.length > 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-2xs">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="py-3 px-4">Transaction & Counterparty</th>
-                  <th className="py-3 px-3">Category & Feed</th>
-                  <th className="py-3 px-3">Flow Type</th>
-                  <th className="py-3 px-3 text-right">Amount (USD)</th>
-                  <th className="py-3 px-3">Status</th>
-                  <th className="py-3 px-3">Date</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+      <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold">
+                <th className="py-3 px-4">Transaction / Counterparty</th>
+                <th className="py-3 px-4">Category</th>
+                <th className="py-3 px-4">Method & Source</th>
+                <th className="py-3 px-4">Date</th>
+                <th className="py-3 px-4 text-right">Amount (₹)</th>
+                <th className="py-3 px-4 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredTransactions.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-slate-400">
+                    <Receipt className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                    <p className="font-semibold text-slate-600">No transactions found</p>
+                    <p className="text-[11px] mt-0.5">Try clearing your filters or add a new transaction.</p>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredTransactions.map((tx) => {
-                  const isInflow = tx.type === 'inflow';
-                  return (
-                    <tr key={tx.id} className="hover:bg-slate-50/70 transition-colors">
-                      {/* Title & Counterparty */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900 text-xs">
-                          {tx.title}
+              ) : (
+                filteredTransactions.map((tx) => (
+                  <tr key={tx.id} className="hover:bg-slate-50/70 transition-colors group">
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-start gap-2.5">
+                        <div className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${tx.type === 'inflow' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-600'}`}>
+                          {tx.type === 'inflow' ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
                         </div>
-                        <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                          {tx.counterparty ? `${tx.counterparty} · ` : ''}Ref: {tx.referenceId}
-                        </div>
-                      </td>
-
-                      {/* Category & Source */}
-                      <td className="py-3.5 px-3">
-                        <div className="text-slate-800 font-medium text-xs">
-                          {tx.category}
-                        </div>
-                        <div className="text-[11px] text-slate-500 mt-0.5">
-                          Feed: {tx.source}
-                        </div>
-                      </td>
-
-                      {/* Flow Type */}
-                      <td className="py-3.5 px-3">
-                        <span className={`inline-flex items-center gap-1 font-semibold text-xs ${isInflow ? 'text-emerald-700' : 'text-slate-600'}`}>
-                          {isInflow ? (
-                            <ArrowUpRight className="w-3.5 h-3.5 text-emerald-600" />
-                          ) : (
-                            <ArrowDownRight className="w-3.5 h-3.5 text-slate-400" />
+                        <div className="min-w-0">
+                          <div className="font-semibold text-slate-900 truncate">
+                            {tx.title}
+                          </div>
+                          <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
+                            <span>{tx.counterparty || 'Self'}</span>
+                            <span>•</span>
+                            <span>{tx.referenceId}</span>
+                          </div>
+                          {tx.notes && (
+                            <div className="text-[10px] text-slate-500 italic mt-0.5">
+                              "{tx.notes}"
+                            </div>
                           )}
-                          <span>{isInflow ? 'Inflow' : 'Outflow'}</span>
-                        </span>
-                      </td>
-
-                      {/* Amount */}
-                      <td className={`py-3.5 px-3 text-right font-mono font-bold text-xs tabular-nums ${isInflow ? 'text-emerald-700' : 'text-slate-800'}`}>
-                        {isInflow ? '+' : '-'}${formatCurrency(tx.amount)}
-                      </td>
-
-                      {/* Status */}
-                      <td className="py-3.5 px-3">
-                        <div className="flex items-center gap-1.5 text-[11px]">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                          <span className="font-semibold text-emerald-700 capitalize">
-                            {tx.status}
-                          </span>
                         </div>
-                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                          SHA-256 Validated
-                        </div>
-                      </td>
+                      </div>
+                    </td>
 
-                      {/* Date */}
-                      <td className="py-3.5 px-3 text-slate-600 font-mono text-[11px]">
-                        {tx.date}
-                      </td>
+                    <td className="py-3.5 px-4">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700">
+                        {tx.category}
+                      </span>
+                    </td>
 
-                      {/* Actions */}
-                      <td className="py-3.5 px-4 text-right">
+                    <td className="py-3.5 px-4">
+                      <div className="font-medium text-slate-700">{tx.paymentMethod}</div>
+                      <div className="text-[10px] text-slate-400">{tx.source}</div>
+                    </td>
+
+                    <td className="py-3.5 px-4 font-mono text-slate-600 whitespace-nowrap">
+                      {formatIndianDate(tx.date)}
+                    </td>
+
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                      <div className={`font-mono font-bold text-sm ${tx.type === 'inflow' ? 'text-emerald-600' : 'text-slate-900'}`}>
+                        {tx.type === 'inflow' ? '+' : '-'}{formatINR(tx.amount)}
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-400">Settled</span>
+                    </td>
+
+                    <td className="py-3.5 px-4 text-center">
+                      <div className="flex items-center justify-center gap-1">
                         <button
-                          onClick={() => setSelectedTx(tx)}
-                          className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="View transaction audit details"
+                          onClick={() => handleOpenEditModal(tx)}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                          title="Edit transaction"
                         >
-                          <ExternalLink className="w-3.5 h-3.5" />
+                          <Edit3 className="w-3.5 h-3.5" />
                         </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        <button
+                          onClick={() => setDeletingTxId(tx.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
+                          title="Delete transaction"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      ) : (
-        <EmptyState
-          title="No historical transactions match current filters"
-          description="Adjust your search query, expand your date range bounds, or clear active category and amount filters."
-          actionLabel="Reset Search & Filters"
-          onAction={() => {
-            setFilterState({
-              searchQuery: '',
-              datePreset: 'all',
-              startDate: '',
-              endDate: '',
-              category: 'all',
-              source: 'all',
-              minAmount: '',
-              maxAmount: '',
-              type: 'all',
-              status: 'all'
-            });
-          }}
-        />
-      )}
+      </div>
 
-      {/* Transaction Details Modal */}
-      {selectedTx && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4">
+      {/* Add / Edit Transaction Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <CreditCard className="w-4 h-4 text-blue-600" />
-                <span className="text-xs font-bold text-slate-900">
-                  Transaction Audit Record
-                </span>
-              </div>
+              <h3 className="text-base font-bold text-slate-900">
+                {editingTx ? 'Edit Transaction' : 'Record New Transaction'}
+              </h3>
               <button
-                onClick={() => setSelectedTx(null)}
-                className="text-slate-400 hover:text-slate-600 font-bold text-xs"
+                onClick={() => setIsModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-md"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div>
-                <span className="text-[11px] text-slate-400 block">Description:</span>
-                <span className="font-bold text-slate-900">{selectedTx.title}</span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <span className="text-[11px] text-slate-400 block">Counterparty:</span>
-                  <span className="font-medium text-slate-800">{selectedTx.counterparty || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-[11px] text-slate-400 block">Category:</span>
-                  <span className="font-medium text-slate-800">{selectedTx.category}</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <span className="text-[11px] text-slate-400 block">Recorded Flow:</span>
-                  <span className={`font-mono font-bold text-base ${selectedTx.type === 'inflow' ? 'text-emerald-700' : 'text-slate-900'}`}>
-                    {selectedTx.type === 'inflow' ? '+' : '-'}${formatCurrency(selectedTx.amount)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[11px] text-slate-400 block">Posting Date:</span>
-                  <span className="font-mono font-medium text-slate-800">{selectedTx.date}</span>
-                </div>
-              </div>
-
-              <div className="p-3 bg-slate-900 text-white rounded-xl font-mono text-[10px] space-y-1">
-                <div className="text-slate-400">HASH ROOT ID:</div>
-                <div className="text-blue-300 break-all">
-                  SHA256_{selectedTx.id}_{selectedTx.referenceId}
-                </div>
-                <div className="text-emerald-400 pt-1">
-                  ✓ VERIFIED ON PLATFORM LEDGER ({selectedTx.source})
+            <form onSubmit={handleSubmitForm} className="space-y-3.5 text-xs">
+              {/* Type Switcher */}
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">Transaction Type</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormType('inflow')}
+                    className={`py-2 rounded-lg font-bold border transition-colors ${
+                      formType === 'inflow'
+                        ? 'bg-emerald-50 border-emerald-500 text-emerald-700'
+                        : 'bg-white border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    + Income / Inflow
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormType('outflow')}
+                    className={`py-2 rounded-lg font-bold border transition-colors ${
+                      formType === 'outflow'
+                        ? 'bg-rose-50 border-rose-500 text-rose-700'
+                        : 'bg-white border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    - Expense / Outflow
+                  </button>
                 </div>
               </div>
-            </div>
 
-            <div className="pt-2 text-right">
-              <button
-                onClick={() => setSelectedTx(null)}
-                className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Manual Log Transaction Modal */}
-      {isLogModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <Plus className="w-4 h-4 text-blue-600" />
-                <span className="text-xs font-bold text-slate-900">
-                  Log Verified Transaction
-                </span>
-              </div>
-              <button
-                onClick={() => setIsLogModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold text-xs"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateTx} className="space-y-3 text-xs">
-              <div>
-                <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                  Transaction Title *
-                </label>
+              {/* Title */}
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">Transaction Title *</label>
                 <input
                   type="text"
-                  placeholder="e.g. Design Consulting Milestone Settlement"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-900 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                   required
+                  placeholder="e.g. Freelance Project Milestone or Monthly Rent"
+                  value={formTitle}
+                  onChange={(e) => setFormTitle(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                 />
               </div>
 
+              {/* Amount & Date */}
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                    Flow Type
-                  </label>
-                  <select
-                    value={newType}
-                    onChange={(e) => setNewType(e.target.value as any)}
-                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800"
-                  >
-                    <option value="inflow">Inflow (Deposit)</option>
-                    <option value="outflow">Outflow (Expense)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                    Amount ($ USD) *
-                  </label>
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-700">Amount in INR (₹) *</label>
                   <input
                     type="number"
-                    step="0.01"
-                    placeholder="2500.00"
-                    value={newAmount}
-                    onChange={(e) => setNewAmount(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-medium text-slate-900 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                     required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                    Category
-                  </label>
-                  <select
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value as any)}
-                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800"
-                  >
-                    <option value="Platform Inflow">Platform Inflow</option>
-                    <option value="Client Retainer">Client Retainer</option>
-                    <option value="Software & Tools">Software & Tools</option>
-                    <option value="Cloud & Hosting">Cloud & Hosting</option>
-                    <option value="Workspace & Studio">Workspace & Studio</option>
-                    <option value="Tax Escrow">Tax Escrow</option>
-                    <option value="Operating Reserve">Operating Reserve</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                    Source Feed
-                  </label>
-                  <select
-                    value={newSource}
-                    onChange={(e) => setNewSource(e.target.value as any)}
-                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800"
-                  >
-                    <option value="Stripe">Stripe</option>
-                    <option value="Upwork">Upwork</option>
-                    <option value="Bank Account">Bank Account</option>
-                    <option value="PayPal">PayPal</option>
-                    <option value="Square">Square</option>
-                    <option value="Invoicing System">Invoicing System</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                    Counterparty
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Acme Studio Inc"
-                    value={newCounterparty}
-                    onChange={(e) => setNewCounterparty(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-900"
+                    min="1"
+                    step="any"
+                    placeholder="45000"
+                    value={formAmount}
+                    onChange={(e) => setFormAmount(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-slate-800 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
 
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                    Date
-                  </label>
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-700">Date *</label>
                   <input
                     type="date"
-                    value={newDate}
-                    onChange={(e) => setNewDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-medium text-slate-900"
+                    required
+                    value={formDate}
+                    onChange={(e) => setFormDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              {/* Category & Payment Method */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-700">Category</label>
+                  <select
+                    value={formCategory}
+                    onChange={(e) => setFormCategory(e.target.value as TransactionCategory)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-500"
+                  >
+                    {ALL_CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-700">Payment Method</label>
+                  <select
+                    value={formPaymentMethod}
+                    onChange={(e) => setFormPaymentMethod(e.target.value as PaymentMethod)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-500"
+                  >
+                    {ALL_PAYMENT_METHODS.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Counterparty */}
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">Counterparty / Merchant (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Apex Global Tech Ltd or Blinkit"
+                  value={formCounterparty}
+                  onChange={(e) => setFormCounterparty(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">Notes & Purpose</label>
+                <textarea
+                  rows={2}
+                  placeholder="Add context for tax, invoice reconciliation, or passport indexation..."
+                  value={formNotes}
+                  onChange={(e) => setFormNotes(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setIsLogModalOpen(false)}
-                  className="px-3.5 py-2 text-slate-600 hover:text-slate-900 font-medium rounded-lg"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-2xs"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-2xs"
                 >
-                  Save Transaction
+                  {editingTx ? 'Save Changes' : 'Record Transaction'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingTxId && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-sm w-full p-6 space-y-4">
+            <h3 className="text-base font-bold text-slate-900">
+              Delete Transaction?
+            </h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Are you sure you want to delete this transaction from your history? This will recalculate your dashboard inflow and savings rate immediately.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                onClick={() => setDeletingTxId(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-lg text-xs transition-colors shadow-2xs"
+              >
+                Yes, Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

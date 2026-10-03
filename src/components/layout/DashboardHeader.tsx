@@ -8,7 +8,8 @@ import {
   CheckCircle2, 
   Clock, 
   Sparkles,
-  ChevronDown
+  ChevronDown,
+  RotateCcw
 } from 'lucide-react';
 import { useNexus } from '../../context/NexusContext';
 import { UserPersona } from '../../types';
@@ -29,6 +30,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     updateUserPersona, 
     setIsShareModalOpen, 
     setIsUploadModalOpen,
+    resetDemoData,
     showToast 
   } = useNexus();
   const [showPersonaMenu, setShowPersonaMenu] = useState(false);
@@ -36,25 +38,25 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
 
   const personas: { id: UserPersona; title: string; subtitle: string }[] = [
-    { id: 'freelancer', title: 'Independent Software Engineer', subtitle: 'Stripe + Upwork Retainers' },
-    { id: 'student', title: 'Graduate Student & AI Researcher', subtitle: 'Stipend + University Grants' },
-    { id: 'gig_worker', title: 'Fleet Contractor & Delivery Lead', subtitle: 'DoorDash + Uber Direct' },
-    { id: 'small_business', title: 'Specialty Coffee Roastery Owner', subtitle: 'Square POS + Vendor Accounts' },
+    { id: 'freelancer', title: 'Independent Software Engineer', subtitle: 'Lucknow • ₹45k/mo UPI & Retainers' },
+    { id: 'student', title: 'Graduate Student & Tutor', subtitle: 'Bengaluru • ₹22k/mo Stipend & Tutoring' },
+    { id: 'self_employed', title: 'Digital Consultant & Creator', subtitle: 'Delhi • ₹85k/mo GST & Invoices' },
+    { id: 'small_business', title: 'Specialty Retail & MSME Owner', subtitle: 'Mumbai • ₹1.8L/mo Razorpay & UPI' },
   ];
 
   const notifications = [
     {
       id: 'notif-1',
       title: 'Consent Token Queried',
-      desc: 'Horizon Capital reviewed your 6-month inflow summary.',
+      desc: 'HDFC Digital Lending verified your 6-month UPI cash flow summary.',
       time: '14m ago',
       icon: CheckCircle2,
       color: 'text-blue-600'
     },
     {
       id: 'notif-2',
-      title: 'Direct API Sync Active',
-      desc: 'Stripe payout of $5,420 was confirmed and authenticated.',
+      title: 'UPI Inflow Settled',
+      desc: 'Apex Fintech milestone settlement of ₹25,000 received via Google Pay.',
       time: '3h ago',
       icon: Sparkles,
       color: 'text-teal-600'
@@ -62,7 +64,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     {
       id: 'notif-3',
       title: 'Quarterly Record Milestone',
-      desc: '90 consecutive days of balanced cashflow recorded.',
+      desc: '90 consecutive days of balanced cash flow recorded in Lucknow.',
       time: '1d ago',
       icon: Clock,
       color: 'text-amber-600'
@@ -89,9 +91,14 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         </button>
 
         <div className="min-w-0">
-          <h1 className="text-base sm:text-lg font-bold text-slate-900 truncate tracking-tight">
-            {title}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-base sm:text-lg font-bold text-slate-900 truncate tracking-tight">
+              {title}
+            </h1>
+            <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+              Demo Data
+            </span>
+          </div>
           {subtitle && (
             <p className="hidden sm:block text-xs text-slate-500 truncate font-medium">
               {subtitle}
@@ -106,7 +113,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search records, receipts, partners..."
+            placeholder="Search transactions, UPI, partners..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
@@ -116,6 +123,16 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
 
       {/* Right zone: Persona switch + Quick actions + Notifications */}
       <div className="flex items-center gap-2 sm:gap-3">
+        {/* Reset Demo Data Button */}
+        <button
+          onClick={resetDemoData}
+          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg text-xs transition-colors hidden xl:flex items-center gap-1"
+          title="Reset sample financial data to baseline"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          <span className="text-[11px]">Reset Demo</span>
+        </button>
+
         {/* Persona Switcher Pill */}
         <div className="relative">
           <button
@@ -136,7 +153,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               onMouseLeave={() => setShowPersonaMenu(false)}
             >
               <div className="px-3 py-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100">
-                Switch FinTech Persona
+                Switch Indian Persona
               </div>
               {personas.map((p) => (
                 <button
